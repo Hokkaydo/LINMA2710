@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <random>
+#include <memory>
 
 #include "globals.hpp"
 #include "matrix.hpp"
