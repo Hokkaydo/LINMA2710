@@ -323,6 +323,7 @@ public:
     {
         for (int epoch = 0; epoch < epochs; ++epoch)
         {
+            // std::cout << "Epoch " << epoch + 1 << " started." << std::endl;
             for (size_t i = 0; i < data.X.size(); ++i)
             {
                 Node input = data.X[i];

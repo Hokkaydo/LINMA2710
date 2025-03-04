@@ -4,10 +4,20 @@
 
 #include "matrix.hpp"
 #include "mlp_sgd.cpp"
+#include <chrono>
 // A helper function to compare floating–point values.
 bool almostEqual(double a, double b, double epsilon = 1e-6)
 {
     return std::fabs(a - b) < epsilon;
+}
+
+void elapsed_time(std::function<void()> f)
+{
+    auto start = std::chrono::high_resolution_clock::now();
+    f();
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> diff = end - start;
+    std::cout << "Elapsed time is " << diff.count() << " s\n";
 }
 
 void test_mlp_training()
@@ -44,7 +54,9 @@ void test_mlp_training()
     data.Y.back().set(0, 0, 0.);
 
     MLP model(2, 128, 1, 1.);
-    model.train(data, 1000);
+    elapsed_time([&]() {
+        model.train(data, 10000);
+    });
 
     // Evaluate the model
     for (size_t i = 0; i < data.X.size(); ++i)
@@ -67,6 +79,7 @@ int main()
         // Create a 2x3 matrix and fill it with 1.5.
         Matrix m(2, 3);
         m.fill(1.5);
+
 
         // Check that every element is 1.5.
         for (int i = 0; i < m.numRows(); ++i)
@@ -112,6 +125,7 @@ int main()
 
         // Test addition: a + b should yield [ [6,8], [10,12] ]
         Matrix sum = a + b;
+
         assert(almostEqual(sum.get(0, 0), 6));
         assert(almostEqual(sum.get(0, 1), 8));
         assert(almostEqual(sum.get(1, 0), 10));
@@ -123,7 +137,7 @@ int main()
         assert(almostEqual(diff.get(0, 1), 4));
         assert(almostEqual(diff.get(1, 0), 4));
         assert(almostEqual(diff.get(1, 1), 4));
-    }
+    }    
 
     // --------------------------------------------------
     // Test 3: Scalar Multiplication and Matrix Multiplication
@@ -291,12 +305,98 @@ int main()
         assert(almostEqual(a.get(0, 1), -4));
         assert(almostEqual(a.get(1, 0), -4));
         assert(almostEqual(a.get(1, 1), -3));
-    }
+
+    }    
 
     std::cout << "Matrix tests passed." << std::endl;
 
-    test_mlp_training();
-    clear_nodes();
+    // test_mlp_training();
+    // clear_nodes();
+
+    int max_run = 1e3;
+    int matrix_size = 1e3;
+
+    // Addition runtime test
+    std::cout << "Addition runtime test: ";
+    elapsed_time([max_run, matrix_size]() {
+        for (int i = 0; i < max_run; ++i)
+        {
+            Matrix a(matrix_size, matrix_size);
+            a.fill(1.5);
+
+            Matrix b(matrix_size, matrix_size);
+            b.fill(2.5);
+
+            Matrix _ = a + b;
+        }
+    });
+
+    // Transpose runtime test
+    std::cout << "Transpose runtime test: ";
+    elapsed_time([max_run, matrix_size]() {
+        for (int i = 0; i < max_run; ++i)
+        {
+            Matrix a(matrix_size, matrix_size);
+            a.fill(1.5);
+
+            Matrix _ = a.transpose();
+        }
+    });
+    
+    Matrix a(matrix_size, matrix_size);
+    a.fill(1.5);
+    Matrix b(matrix_size, matrix_size);
+    b.fill(2.5);
+    std::cout << "1000x1000 * 1000x1000 runtime test: ";
+    elapsed_time([a, b]() {
+        Matrix _ = a*b;
+        }
+    );
+
+    // Multiplication runtime test
+    std::cout << "Multiplication runtime test : ";
+    elapsed_time([max_run, matrix_size]() {
+        for (int i = 0; i < max_run; ++i)
+        {
+            Matrix a(matrix_size, matrix_size/10);
+            a.fill(1.5);
+
+            Matrix b(matrix_size/10, matrix_size);
+            b.fill(2.5);
+
+            Matrix _ = a * b;
+        }
+    });
+
+    // Apply runtime test
+    std::cout << "Apply runtime test: ";
+    elapsed_time([max_run, matrix_size]() {
+        for (int i = 0; i < max_run; ++i)
+        {
+            Matrix a(matrix_size, matrix_size);
+            a.fill(1.5);
+
+            Matrix _ = a.apply([](double x)
+                                     { return x * x; });
+        }
+    });
+
+    // sub_mul runtime test
+    std::cout << "sub_mul runtime test: ";
+    elapsed_time([max_run, matrix_size]() {
+        for (int i = 0; i < max_run; ++i)
+        {
+            Matrix a(matrix_size, matrix_size);
+            a.fill(1.5);
+
+            Matrix c(matrix_size, matrix_size);
+            c.fill(2.5);
+
+            a.sub_mul(1, c);
+        }
+    });
+
+    std::cout << "All tests passed." << std::endl;
 
     return 0;
 }

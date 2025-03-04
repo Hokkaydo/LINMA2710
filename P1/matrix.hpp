@@ -3,12 +3,13 @@
 
 #include <vector>
 #include <functional>
+#include <cstdlib>
 
 class Matrix
 {
 private:
     int rows, cols;
-    std::vector<double> data;
+    double* data;
 
 public:
     // Constructors
@@ -31,7 +32,8 @@ public:
     Matrix operator-(const Matrix &other) const; // Subtraction
     Matrix operator*(const Matrix &other) const; // Matrix multiplication
     Matrix operator*(double scalar) const;       // Scalar multiplication
-
+    
+    Matrix mult_test(const Matrix &other) const;
     // Transpose: returns a new Matrix that is the transpose.
     Matrix transpose() const;
 
@@ -52,6 +54,9 @@ public:
         }
         return *this;
     }
+    
+    ~Matrix();
+
 };
 
 #endif // MATRIX_H
