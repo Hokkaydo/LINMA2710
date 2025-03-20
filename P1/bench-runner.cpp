@@ -57,9 +57,8 @@ int main(int argc, char* argv[]) {
                     Matrix C = A * B;
                     auto end = std::chrono::high_resolution_clock::now();
                     
-                    time += std::chrono::duration<double>(end - start).count();
+                    time += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count()/1e9;
                 }
-                time *= 1e9; // convert to seconds
                 std::cout << m << "," << n << "," << k << "," 
                 << time/it_max
                 << std::endl;

@@ -1,17 +1,14 @@
 #include "matrix.hpp"
 #include <stdexcept>
 #include <cstring>
-#ifdef __AVX2__
 #include <immintrin.h>
-#endif
 
 Matrix::Matrix(int rows, int cols) : rows(rows), cols(cols)
 {
-    // 32 byte alignment for AVX2 instructions
-    // posix_memalign aligns size on a power of 2 boundary
+    // 64 byte alignment for AVX2 instructions
     size_t size = rows * cols * sizeof(double);
-    size = size + 32 - size % 32;
-    data = (double *)aligned_alloc(32, size);
+    size = size + 64 - size % 64;
+    data = (double *)aligned_alloc(64, size);
 
     if (data == nullptr)
     {
@@ -21,13 +18,11 @@ Matrix::Matrix(int rows, int cols) : rows(rows), cols(cols)
 
 Matrix::Matrix(const Matrix &other) : rows(other.rows), cols(other.cols)
 {
-    // 32 byte alignment for AVX2 instructions
-    // posix_memalign aligns size on a multiple of 32 bytes
+    // 64 byte alignment for AVX2 instructions
     size_t size = rows * cols * sizeof(double);
-    size = size + 32 - size % 32;
+    size = size + 64 - size % 64;
 
-    data = (double *)aligned_alloc(32, size);
-
+    data = (double *)aligned_alloc(64, size);
     if (data == nullptr)
     {
         throw std::bad_alloc();
@@ -60,7 +55,6 @@ void Matrix::fill(double value)
     std::fill(data, data + rows * cols, value);
 }
 
-#ifndef __AVX2__
 Matrix Matrix::operator+(const Matrix &other) const
 {
     Matrix res = Matrix(rows, cols);
@@ -71,29 +65,7 @@ Matrix Matrix::operator+(const Matrix &other) const
     }
     return res;
 }
-#else
-Matrix Matrix::operator+(const Matrix &other) const
-{
-    Matrix res = Matrix(rows, cols);
-    int size = rows * cols;
 
-    for (int i = 0; i < size - (size % 4); i += 4)
-    {
-        __m256d a = _mm256_load_pd(data + i);
-        __m256d b = _mm256_load_pd(other.data + i);
-        __m256d c = _mm256_add_pd(a, b);
-        _mm256_store_pd(res.data + i, c);
-    }
-    for (int i = size - (size % 4); i < size; i++)
-    {
-        res.data[i] = data[i] + other.data[i];
-    }
-
-    return res;
-}
-#endif
-
-#ifndef __AVX2__
 Matrix Matrix::operator-(const Matrix &other) const
 {
     Matrix res = Matrix(rows, cols);
@@ -104,29 +76,7 @@ Matrix Matrix::operator-(const Matrix &other) const
     }
     return res;
 }
-#else
-Matrix Matrix::operator-(const Matrix &other) const
-{
-    Matrix res = Matrix(rows, cols);
-    int size = rows * cols;
-    int aligned_size = size - (size % 4);
-    for (int i = 0; i < aligned_size; i += 4)
-    {
-        __m256d a = _mm256_load_pd(data + i);
-        __m256d b = _mm256_load_pd(other.data + i);
-        __m256d c = _mm256_sub_pd(a, b);
-        _mm256_store_pd(res.data + i, c);
-    }
 
-    for (int i = aligned_size; i < size; i++)
-    {
-        res.data[i] = data[i] - other.data[i];
-    }
-    return res;
-}
-#endif
-
-#ifndef __AVX2__
 Matrix Matrix::operator*(double value) const
 {
     Matrix res = Matrix(rows, cols);
@@ -137,52 +87,6 @@ Matrix Matrix::operator*(double value) const
     }
     return res;
 }
-#else
-Matrix Matrix::operator*(double value) const
-{
-    Matrix res = Matrix(rows, cols);
-    int size = rows * cols;
-    int aligned_size = size - (size % 4);
-    const __m256d value_vec = _mm256_set1_pd(value);
-
-    for (int i = 0; i < aligned_size; i += 4)
-    {
-        __m256d a = _mm256_load_pd(data + i);
-        __m256d b = _mm256_mul_pd(a, value_vec);
-        _mm256_store_pd(res.data + i, b);
-    }
-
-    for (int i = aligned_size; i < size; i++)
-    {
-        res.data[i] = data[i] * value;
-    }
-    return res;
-}
-#endif
-
-#ifndef __AVX2__
-Matrix Matrix::operator*(const Matrix &other) const
-{
-    if (cols != other.rows)
-    {
-        throw std::invalid_argument("Matrix dimensions do not match for multiplication");
-    }
-    Matrix res = Matrix(rows, other.cols);
-    for (int i = 0; i < rows; i++)
-    {
-        for (int j = 0; j < other.cols; j++)
-        {
-            double sum = 0;
-            for (int k = 0; k < cols; k++)
-            {
-                sum += data[i * cols + k] * other.data[k * other.cols + j];
-            }
-            res.data[i * other.cols + j] = sum;
-        }
-    }
-    return res;
-}
-#else
 
 Matrix Matrix::mult_test(const Matrix &other) const
 {
@@ -213,67 +117,103 @@ Matrix Matrix::operator*(const Matrix &other) const
         throw std::invalid_argument("Matrix dimensions do not match for multiplication");
     }
     Matrix res = Matrix(rows, other.cols);
-    const Matrix other_T = other.transpose();
+    res.fill(0);
+    const double* A = data;
+    const Matrix B_transposed = other.transpose();
+    const double* B_T = B_transposed.data;
 
-    for (int i = 0; i < rows; i++)
-    {
-        for (int j = 0; j < other_T.rows; j++)
-        {
-            double final_sum = 0;
-            int k = 0;
+    double* C = res.data;
 
-            if (cols - 4 > 0)
-            {
-                __m256d sum = _mm256_setzero_pd();
-                for (; k < cols - 4; k += 4)
-                {
-                    __m256d a = _mm256_loadu_pd(data + i * cols + k);
-                    __m256d b = _mm256_loadu_pd(other_T.data + j * other_T.cols + k);
-                    sum = _mm256_fmadd_pd(a, b, sum);
+    int M = rows;
+    int N = other.cols;
+    int K = cols;
+
+    constexpr int BLOCK_SIZE = 64; // 64B cache line optimization
+
+    for (int i = 0; i < M; i += BLOCK_SIZE) {
+        for (int j = 0; j < N; j += BLOCK_SIZE) {
+            for (int k = 0; k < K; k += BLOCK_SIZE) {
+
+                for (int ii = i; ii < std::min(i + BLOCK_SIZE, M); ++ii) {
+                    int jj;
+                    for (jj = j; jj + 4 <= std::min(j + BLOCK_SIZE, N); jj += 4) {
+
+                        int kk;
+                        int k_max = std::min(k + BLOCK_SIZE, K);
+                        
+                        // Separate accumulators for each output column
+                        __m256d acc0 = _mm256_setzero_pd();
+                        __m256d acc1 = _mm256_setzero_pd();
+                        __m256d acc2 = _mm256_setzero_pd();
+                        __m256d acc3 = _mm256_setzero_pd();
+                    
+                        for (kk = k; kk + 4 <= k_max; kk += 4) {
+                            __m256d a_vec = _mm256_loadu_pd(&A[ii * K + kk]);
+                    
+                            // Load columns of B_T
+                            __m256d b_vec0 = _mm256_loadu_pd(&B_T[jj * K + kk]);
+                            __m256d b_vec1 = _mm256_loadu_pd(&B_T[(jj + 1) * K + kk]);
+                            __m256d b_vec2 = _mm256_loadu_pd(&B_T[(jj + 2) * K + kk]);
+                            __m256d b_vec3 = _mm256_loadu_pd(&B_T[(jj + 3) * K + kk]);
+                    
+                            // Multiply and accumulate for each column
+                            acc0 = _mm256_fmadd_pd(a_vec, b_vec0, acc0);
+                            acc1 = _mm256_fmadd_pd(a_vec, b_vec1, acc1);
+                            acc2 = _mm256_fmadd_pd(a_vec, b_vec2, acc2);
+                            acc3 = _mm256_fmadd_pd(a_vec, b_vec3, acc3);
+                        }
+                    
+                        // Store 0+1 on 0, 1 and 2+3 on 2,3
+                        acc0 = _mm256_hadd_pd(acc0, acc0);
+                        acc1 = _mm256_hadd_pd(acc1, acc1);
+                        acc2 = _mm256_hadd_pd(acc2, acc2);
+                        acc3 = _mm256_hadd_pd(acc3, acc3);
+
+                        // Reduce 0 + 2
+                        double temp[4];
+                        temp[0] = ((double*)&acc0)[0] + ((double*)&acc0)[2]; 
+                        temp[1] = ((double*)&acc1)[0] + ((double*)&acc1)[2];
+                        temp[2] = ((double*)&acc2)[0] + ((double*)&acc2)[2];
+                        temp[3] = ((double*)&acc3)[0] + ((double*)&acc3)[2];
+                    
+                        // Handle remaining elements
+                        for (; kk < k_max; ++kk) {
+                            temp[0] += A[ii * K + kk] * B_T[(jj + 0) * K + kk];
+                            temp[1] += A[ii * K + kk] * B_T[(jj + 1) * K + kk];
+                            temp[2] += A[ii * K + kk] * B_T[(jj + 2) * K + kk];
+                            temp[3] += A[ii * K + kk] * B_T[(jj + 3) * K + kk];
+                        }
+                    
+                        C[ii * N + jj + 0] += temp[0];
+                        C[ii * N + jj + 1] += temp[1];
+                        C[ii * N + jj + 2] += temp[2];
+                        C[ii * N + jj + 3] += temp[3];
+                    }
+                    
+                    // Handle remaining columns (if N is not a multiple of 4)
+                    for (; jj < std::min(j + BLOCK_SIZE, N); jj++) {
+                        double sum = C[ii * N + jj]; 
+                        for (int kk = k; kk < std::min(k + BLOCK_SIZE, K); ++kk) {
+                            sum += A[ii * K + kk] * B_T[jj * K + kk];
+                        }
+                        C[ii * N + jj] = sum;
+                    }   
                 }
-                double temp[4];
-                _mm256_store_pd(temp, sum);
-                final_sum = temp[0] + temp[1] + temp[2] + temp[3];
             }
-            for (; k < cols; k++)
-            {
-                final_sum += data[i * cols + k] * other_T.data[j * other_T.cols + k];
-            }
-            res.data[i * other.cols + j] = final_sum;
         }
     }
     return res;
 }
-#endif
-
-#ifndef __AVX2__
-Matrix Matrix::transpose() const
-{
-    Matrix transposed = Matrix(cols, rows);
-
-    for (int i = 0; i < rows; i++)
-    {
-        for (int j = 0; j < cols; j++)
-        {
-            transposed.data[j * rows + i] = data[i * cols + j];
-        }
-    }
-
-    return transposed;
-}
-#else
 
 Matrix Matrix::transpose() const
 {
     Matrix transposed = Matrix(cols, rows);
-    constexpr int block = 4;
+    constexpr int block = 64;
 
-    for (int i = 0; i < rows; i += block)
+    for (int i = 0; i < rows; i += 4)
     {
-
         for (int j = 0; j < cols; j++)
         {
-
             for (int b = 0; b < block && i + b < rows; b++)
             {
                 transposed.data[j * rows + i + b] = data[(i + b) * cols + j];
@@ -282,8 +222,6 @@ Matrix Matrix::transpose() const
     }
     return transposed;
 }
-
-#endif
 
 Matrix Matrix::apply(const std::function<double(double)> &func) const
 {
@@ -296,36 +234,14 @@ Matrix Matrix::apply(const std::function<double(double)> &func) const
     return res;
 }
 
-#ifndef __AVX2__
-void Matrix::sub_mul(double scalar, const Matrix &other)
-{
-    for (int i = 0; i < rows * cols; i++)
-    {
-        data[i] -= scalar * other.data[i];
-    }
-}
-#else
-
 void Matrix::sub_mul(double scalar, const Matrix &other)
 {
     int size = rows * cols;
-    // int aligned_size = size - (size % 4);
-    // const __m256d scalar_vec = _mm256_set1_pd(scalar);
-
-    // for (int i = 0; i < aligned_size; i += 4)
-    // {
-    //     __m256d a = _mm256_load_pd(data + i);
-    //     __m256d b = _mm256_load_pd(other.data + i);
-    //     __m256d c = _mm256_fnmadd_pd(scalar_vec, b, a);
-    //     _mm256_store_pd(data + i, c);
-    // }
-
     for (int i = 0; i < size; i++)
     {
         data[i] -= scalar * other.data[i];
     }
 }
-#endif
 
 Matrix::~Matrix()
 {

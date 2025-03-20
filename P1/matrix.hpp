@@ -4,6 +4,8 @@
 #include <vector>
 #include <functional>
 #include <cstdlib>
+#include <cstring>
+#include <cstdio>
 
 class Matrix
 {
@@ -50,7 +52,12 @@ public:
         {
             rows = other.rows;
             cols = other.cols;
-            data = other.data;
+            data = (double*) aligned_alloc(64, rows * cols * sizeof(double));
+            if (data == nullptr)
+            {
+                throw std::bad_alloc();
+            }
+            memcpy(data, other.data, rows * cols * sizeof(double));
         }
         return *this;
     }

@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -O3 -fopenmp -mavx2 -mfma -ffast-math -march=native -mtune=native -DNDEBUG
+CXXFLAGS = -std=c++17 -Wall -Wextra -O3 -march=native -mtune=native -ffast-math -funroll-loops 
 TARGET = tests
 SRC = mlp_sgd.cpp tests.cpp globals.cpp matrix.cpp
 BENCH_SRC = mlp_sgd.cpp globals.cpp matrix.cpp bench-runner.cpp

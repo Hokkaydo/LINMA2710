@@ -4,10 +4,17 @@ import pandas as pd
 from time import perf_counter as clock
 import sys
 
+import matplotlib as mpl
+# use LaTeX fonts in the plot
+mpl.rc('text', usetex=True)
+mpl.rc('font', family='serif')
+
+
 results = [
-    ("bench-results_save.csv", "Naive", "r", 1),
-    ("bench-results-speed.csv", "AVX2, FMA, OMP", "g", 3),
-    ("bench-results-speed-arch-native.csv", "AVX2, FMA, OMP, -march=native", "b", 2),
+    ("bench-results_save.csv", "Naive", "r", 2),
+    # ("bench-results-speed.csv", "AVX2, FMA, OMP", "g", 2),
+    # ("bench-results-speed-arch-native.csv", "AVX2, FMA, -mtune=native", "b", 2),
+    ("bench-results-fast-final.csv", "AVX2, FMA, -mtune=native, blocked tile", "b", 2),
 ]
 
 if len(sys.argv) > 1 and sys.argv[1] == "matmul":
@@ -28,15 +35,18 @@ for filename, title, color, width in results:
     coeff = np.polyfit(np.log(x), np.log(y), 1)
     poly = np.poly1d(coeff)
     fit = np.exp(poly(np.log(x)))
-    plt.loglog(x, fit, color + '--', label=title + ' fit', linewidth=width)
     plt.scatter(x, y, color=color, label=title, s=10, linewidths=width)
+    # plt.loglog(x, fit, color + '--', label=title + ' fit', linewidth=2)
     
-t = np.linspace(0, data['m'].max()*data['n'].max()*data['k'].max(), 100)
-
-
-plt.xlabel(r'$m\times n\times k$ $[-]$')
-plt.ylabel(r'Time $[s]$')
-plt.title(r'Matrix multiplication time for 2 matrices of size $m\times n$ and $n\times k$ for variable $m,n,k$', wrap=True)
-plt.legend()
+plt.loglog(x, 0.8*10e-11*x, 'k--', label=r'$\mathcal{O}(m\times n\times k)$', linewidth=2)
+plt.loglog(x, 3.9*10e-10*x, 'k--', linewidth=2)
+plt.xscale('log')
+plt.yscale('log')
+plt.xlabel(r'$m\times n\times k$ [-]')
+plt.ylabel(r'Time [s]')
+plt.ylim(10e-6, 10)
+plt.title('Matrix multiplication time for 2 matrices of size $m\\times n$ and $n\\times k$ \n for variable $m,n,k$')
+plt.legend(loc='upper left')
+plt.grid()
 plt.savefig("benchmark.pdf")
-plt.show()
+# plt.show()

@@ -168,8 +168,10 @@ int main()
         // [ [1*5 + 2*7, 1*6 + 2*8],
         //   [3*5 + 4*7, 3*6 + 4*8] ]
         // = [ [19, 22],
-        //     [43, 50] ]
+        //     [43, 50] ]        
+
         Matrix prod = a * b;
+
         assert(almostEqual(prod.get(0, 0), 19));
         assert(almostEqual(prod.get(0, 1), 22));
         assert(almostEqual(prod.get(1, 0), 43));
@@ -228,6 +230,29 @@ int main()
                     std::cerr << "Mismatch at (" << i << "," << j << "): "
                               << "expected " << expected[i][j]
                               << ", got " << C.get(i, j) << "\n";
+                    assert(false);
+                }
+            }
+        }
+
+        Matrix r = Matrix(1005, 997);
+        Matrix a = r.apply([](double) { return std::rand()%10; });
+        r = Matrix(997, 1003);
+        Matrix b = r.apply([](double) { return std::rand()%10; });
+
+
+        Matrix t = a.mult_test(b);
+        Matrix c = a*b;
+
+        for (int i = 0; i < c.numRows(); ++i)
+        {
+            for (int j = 0; j < c.numCols(); ++j)
+            {
+                if (!almostEqual(c.get(i, j), t.get(i, j)))
+                {
+                    std::cerr << "Mismatch at (" << i << "," << j << "): "
+                              << "expected " << t.get(i, j)
+                              << ", got " << c.get(i, j) << "\n";
                     assert(false);
                 }
             }
@@ -317,82 +342,70 @@ int main()
     int matrix_size = 1e3;
 
     // Addition runtime test
+    Matrix a(matrix_size, matrix_size);
+    a.fill(1.5);
+    Matrix b(matrix_size, matrix_size);
+    b.fill(2.5);
+
     std::cout << "Addition runtime test: ";
-    elapsed_time([max_run, matrix_size]() {
+    elapsed_time([max_run, a, b]() {
         for (int i = 0; i < max_run; ++i)
         {
-            Matrix a(matrix_size, matrix_size);
-            a.fill(1.5);
-
-            Matrix b(matrix_size, matrix_size);
-            b.fill(2.5);
-
             Matrix _ = a + b;
         }
     });
 
     // Transpose runtime test
     std::cout << "Transpose runtime test: ";
-    elapsed_time([max_run, matrix_size]() {
+    elapsed_time([max_run, a]() {
         for (int i = 0; i < max_run; ++i)
         {
-            Matrix a(matrix_size, matrix_size);
-            a.fill(1.5);
-
             Matrix _ = a.transpose();
         }
     });
     
-    Matrix a(matrix_size, matrix_size);
-    a.fill(1.5);
-    Matrix b(matrix_size, matrix_size);
-    b.fill(2.5);
     std::cout << "1000x1000 * 1000x1000 runtime test: ";
-    elapsed_time([a, b]() {
-        Matrix _ = a*b;
-        }
-    );
+    elapsed_time([a, b]() { Matrix _ = a*b; });
 
     // Multiplication runtime test
+
+    a = Matrix(matrix_size, matrix_size/10);
+    a.fill(1.5);
+
+    b = Matrix(matrix_size/10, matrix_size);
+    b.fill(2.5);
+
     std::cout << "Multiplication runtime test : ";
-    elapsed_time([max_run, matrix_size]() {
+    elapsed_time([max_run, a, b]() {
         for (int i = 0; i < max_run; ++i)
         {
-            Matrix a(matrix_size, matrix_size/10);
-            a.fill(1.5);
-
-            Matrix b(matrix_size/10, matrix_size);
-            b.fill(2.5);
-
             Matrix _ = a * b;
         }
     });
 
     // Apply runtime test
+    a = Matrix(matrix_size, matrix_size);
+    a.fill(1.5);
     std::cout << "Apply runtime test: ";
-    elapsed_time([max_run, matrix_size]() {
+    elapsed_time([max_run, a]() {
         for (int i = 0; i < max_run; ++i)
         {
-            Matrix a(matrix_size, matrix_size);
-            a.fill(1.5);
-
             Matrix _ = a.apply([](double x)
                                      { return x * x; });
         }
     });
 
     // sub_mul runtime test
+
+    b = Matrix(matrix_size, matrix_size);
+    b.fill(2.5);
     std::cout << "sub_mul runtime test: ";
-    elapsed_time([max_run, matrix_size]() {
+    elapsed_time([max_run, matrix_size,  b]() {
         for (int i = 0; i < max_run; ++i)
         {
             Matrix a(matrix_size, matrix_size);
             a.fill(1.5);
-
-            Matrix c(matrix_size, matrix_size);
-            c.fill(2.5);
-
-            a.sub_mul(1, c);
+            a.sub_mul(1, b);
         }
     });
 
