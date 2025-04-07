@@ -29,6 +29,18 @@ bool matricesEqual(const Matrix& a, const Matrix& b, double epsilon = 1e-10) {
     return true;
 }
 
+void print_matrix(const Matrix &matrix)
+{
+    for (int i = 0; i < matrix.numRows(); i++)
+    {
+        for (int j = 0; j < matrix.numCols(); j++)
+        {
+            std::cout << matrix.get(i, j) << " ";
+        }
+        std::cout << std::endl;
+    }
+}
+
 // Test constructor and basic properties
 void testConstructorAndBasics() {
     int rank;
@@ -50,9 +62,11 @@ void testConstructorAndBasics() {
     // Check dimensions
     assert(distMatrix.numRows() == 3);
     assert(distMatrix.numCols() == 4);
-    
+
     // Gather and check equality with original
+    
     Matrix gathered = distMatrix.gather();
+
     assert(matricesEqual(gathered, testMatrix));
     
     if (rank == 0) {
@@ -128,6 +142,7 @@ void testApply() {
     
     // Gather and check
     Matrix gathered = squaredMatrix.gather();
+
     assert(matricesEqual(gathered, expectedMatrix));
     
     if (rank == 0) {
@@ -155,11 +170,9 @@ void testApplyBinary() {
     MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
     DistributedMatrix distMatrix1(testMatrix1, numProcs);
     DistributedMatrix distMatrix2(testMatrix2, numProcs);
-    
     // Apply binary function (add)
     auto addFunc = [](double a, double b) { return a + b; };
     DistributedMatrix resultMatrix = DistributedMatrix::applyBinary(distMatrix1, distMatrix2, addFunc);
-    
     // Create expected result
     Matrix expectedMatrix(3, 4);
     for (int i = 0; i < 3; i++) {
@@ -516,13 +529,6 @@ int main(int argc, char** argv) {
         }
         MPI_Abort(MPI_COMM_WORLD, 1);
     }
-    
-    // Finalize MPI if we initialized it
-    // int finalized;
-    // MPI_Finalized(&finalized);
-    // if (!finalized && initialized) {
-    //     MPI_Finalize();
-    // }
 
     MPI_Finalize();
     return 0;

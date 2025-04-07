@@ -31,6 +31,9 @@ public:
     // Copy constructor
     DistributedMatrix(const DistributedMatrix& other);
 
+    DistributedMatrix(const Matrix &localData, int numProcesses, int startCol, int globalCols);
+
+
     // Assignement operator (not necessary to implement)
     DistributedMatrix& operator=(const DistributedMatrix& other) = default;
     

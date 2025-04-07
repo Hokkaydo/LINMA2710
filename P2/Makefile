@@ -1,8 +1,9 @@
 CXX = mpic++
-CXXFLAGS = -std=c++17 -Wall -Wextra -O0
+CXXFLAGS = -std=c++17 -Wall -Wextra -O3 -march=native -mtune=native -ffast-math -funroll-loops 
 TARGET = distributedtests
 OBJ = matrix.o distributedmatrix.o distributedtests.o mlp_sgd_distributed.o globals.o
 HEADERS = abstractmatrix.hpp matrix.hpp distributedmatrix.hpp globals.hpp
+NPROC = 4
 
 all:
 	$(MAKE) clean && $(MAKE) run
@@ -26,9 +27,16 @@ globals.o: globals.cpp globals.hpp mlp_sgd_distributed.cpp
 	$(CXX) $(CXXFLAGS) -c globals.cpp
 
 run: $(TARGET)
-	mpirun -np 4 ./$(TARGET)
+	mpirun -np $(NPROC) ./$(TARGET)
 
+benchmark: benchmark.cpp $(HEADERS)
+	$(CXX) $(CXXFLAGS) -o benchmark benchmark.cpp matrix.o distributedmatrix.o
+	@echo "Running benchmark..."
+	@echo "Using $(NPROC) processes."
+	mpirun -np $(NPROC) ./benchmark > benchmark_results.txt
+	@echo "Benchmarking completed."
+	@echo "Results saved to benchmark_results.txt."
 clean:
 	rm -f $(OBJ) $(TARGET)
 
-.PHONY: all run clean
+.PHONY: all run clean benchmark

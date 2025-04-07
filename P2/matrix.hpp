@@ -3,6 +3,9 @@
 
 #include <vector>
 #include <functional>
+#include <cstdlib>
+#include <cstring>
+#include <cstdio>
 
 #include "abstractmatrix.hpp"
 
@@ -10,12 +13,13 @@ class Matrix : public AbstractMatrix
 {
 private:
     int rows, cols;
-    std::vector<double> data;
+    double* data;
 
 public:
     // Constructors
     Matrix(int rows, int cols);
     Matrix(const Matrix &other);
+    Matrix(const double *data, int rows, int cols);
 
     // Basic access
     double get(int i, int j) const;
@@ -48,10 +52,22 @@ public:
         {
             rows = other.rows;
             cols = other.cols;
-            data = other.data;
+            data = (double*) aligned_alloc(64, rows * cols * sizeof(double));
+            if (data == nullptr)
+            {
+                throw std::bad_alloc();
+            }
+            memcpy(data, other.data, rows * cols * sizeof(double));
         }
         return *this;
     }
+
+    double* getData() const {
+        return data;
+    }
+    
+    ~Matrix();
+
 };
 
 #endif // MATRIX_H
