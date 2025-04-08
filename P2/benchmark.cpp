@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     
     // Benchmark time multiply between big matrices for multiple sizes and number of processes
-    int sizeExpRangeEnd = 5; // 10^5
+    int sizeExpRangeEnd = 4; // 10^5
     int sizeExpRangeStart = 1; // 10^1
     int maxIterations = 10;
     int numProcesses;
@@ -23,27 +23,27 @@ int main(int argc, char** argv) {
         std::cout << "Size,Time" << std::endl;
     }
     for (int i = 0; i < maxIterations; ++i) {
-        int size = (int)pow(10, (sizeExpRangeEnd - sizeExpRangeStart) * (double)i / (double)maxIterations + sizeExpRangeStart);
-        // Matrix A(size, size);
-        // Matrix B(size, size);
+        int size = (int)pow(10, (sizeExpRangeEnd - sizeExpRangeStart) * (double)(i+1) / (double)maxIterations + sizeExpRangeStart);
+        Matrix A(size, size);
+        Matrix B(size, size);
         
         // Initialize matrices with random values
-        // for (int j = 0; j < size; ++j) {
-        //     for (int k = 0; k < size; ++k) {
-        //         A.set(j, k, (double)rand() / (double)RAND_MAX);
-        //         B.set(j, k, (double)rand() / (double)RAND_MAX);
-        //     }
-        // }
+        for (int j = 0; j < size; ++j) {
+            for (int k = 0; k < size; ++k) {
+                A.set(j, k, (double)rand() / (double)RAND_MAX);
+                B.set(j, k, (double)rand() / (double)RAND_MAX);
+            }
+        }
         
         // Create distributed matrices
-        // DistributedMatrix distA(A, numProcesses);
-        // DistributedMatrix distB(B, numProcesses);
+        DistributedMatrix distA(A, numProcesses);
+        DistributedMatrix distB(B, numProcesses);
         
         // Start timing
         double startTime = MPI_Wtime();
         
         // Perform multiplication
-        // Matrix res = distA.multiplyTransposed(distB);
+        Matrix res = distA.multiplyTransposed(distB);
         
         // End timing
         double endTime = MPI_Wtime();
