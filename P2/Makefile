@@ -34,7 +34,7 @@ benchmark: benchmark.cpp $(HEADERS) $(OBJ)
 	@$(CXX) $(CXXFLAGS) -o benchmark benchmark.cpp matrix.o distributedmatrix.o
 	@echo "Running benchmark..."
 	@echo "Using $(NPROC) processes."
-	@mpirun -np $(NPROC) ./benchmark > $(BENCH_OUT_DIR)benchmark_results_$(NPROC)_procs.txt
+	@mpirun -np $(NPROC) ./benchmark #> $(BENCH_OUT_DIR)benchmark_results_$(NPROC)_procs.txt
 	@echo "Benchmarking completed."
 	@echo "Results saved to $(BENCH_OUT_DIR)benchmark_results_$(NPROC)_procs.txt."
 clean:
