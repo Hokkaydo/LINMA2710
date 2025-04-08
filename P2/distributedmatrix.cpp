@@ -1,5 +1,4 @@
 #include "distributedmatrix.hpp"
-#include <stdio.h>
 #include <iostream>
 // Constructor taking a Matrix in input and returning a DistributedMatrix
 //      Assumes that MPI is already initialized
@@ -155,10 +154,12 @@ DistributedMatrix DistributedMatrix::applyBinary(
 // Matrix multiplication: DistributedMatrix * DistributedMatrix^T (returns a regular Matrix)
 //      Can assume the same columns' partitioning across processes for the inputs
 Matrix DistributedMatrix::multiplyTransposed(const DistributedMatrix &other) const {
-    double resultData[globalRows * other.globalRows];
     Matrix local = localData * other.localData.transpose();
+    double *resultData = (double*) malloc(globalRows * other.globalRows * sizeof(double));
     MPI_Allreduce(local.getData(), resultData, globalRows*other.globalRows, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    return Matrix(resultData, globalRows, other.globalRows);
+    Matrix result(resultData, globalRows, other.globalRows);
+    free(resultData);
+    return result;
 }
 
 // Return the sum of all the elements of the global matrix
@@ -181,8 +182,8 @@ Matrix DistributedMatrix::gather() const {
     int nP;
     MPI_Comm_size(MPI_COMM_WORLD, &nP);
 
-    int lcol[nP]; //number of local column
-    int disp[nP]; //vecteur de déplacement
+    int lcol[nP]; 
+    int disp[nP];
 
     MPI_Allgather(&localCols, 1, MPI_INT, &lcol, 1, MPI_INT, MPI_COMM_WORLD);
     MPI_Allgather(&startCol, 1, MPI_INT, &disp, 1, MPI_INT, MPI_COMM_WORLD);

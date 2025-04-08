@@ -8,7 +8,7 @@ Matrix::Matrix(int rows, int cols) : rows(rows), cols(cols)
     // 64 byte alignment for AVX2 instructions
     size_t size = rows * cols * sizeof(double);
     size = size + 64 - size % 64;
-    data = (double *)aligned_alloc(64, size);
+    data = (double *)malloc(size);
 
     if (data == nullptr)
     {
@@ -22,7 +22,7 @@ Matrix::Matrix(const Matrix &other) : rows(other.rows), cols(other.cols)
     size_t size = rows * cols * sizeof(double);
     size = size + 64 - size % 64;
 
-    data = (double *)aligned_alloc(64, size);
+    data = (double *)malloc(size);
     if (data == nullptr)
     {
         throw std::bad_alloc();

@@ -29,14 +29,14 @@ globals.o: globals.cpp globals.hpp mlp_sgd_distributed.cpp
 run: $(TARGET)
 	mpirun -np $(NPROC) ./$(TARGET)
 
-benchmark: benchmark.cpp $(HEADERS)
-	$(CXX) $(CXXFLAGS) -o benchmark benchmark.cpp matrix.o distributedmatrix.o
+benchmark: benchmark.cpp $(HEADERS) $(OBJ)
+	@$(CXX) $(CXXFLAGS) -o benchmark benchmark.cpp matrix.o distributedmatrix.o
 	@echo "Running benchmark..."
 	@echo "Using $(NPROC) processes."
-	mpirun -np $(NPROC) ./benchmark > benchmark_results.txt
+	@mpirun -np $(NPROC) ./benchmark > benchmark_results_$(NPROC)_procs.txt
 	@echo "Benchmarking completed."
-	@echo "Results saved to benchmark_results.txt."
+	@echo "Results saved to benchmark_results_$(NPROC)_procs.txt."
 clean:
-	rm -f $(OBJ) $(TARGET)
+	rm -f $(OBJ) $(TARGET) *.o benchmark
 
 .PHONY: all run clean benchmark
