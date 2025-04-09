@@ -43,7 +43,7 @@ tau: benchmark.cpp $(HEADERS) $(OBJ)
 	@$(CXX) $(CXXFLAGS) -o benchmark benchmark.cpp matrix.o distributedmatrix.o
 	@echo "Running tau..."
 	@echo "Using $(NPROC) processes."
-	@mpirun -np $(NPROC) tau_exec -T mpi ./benchmark > $(TAU_OUT_DIR)tau_results_$(NPROC)_procs.txt
+	@mpirun -np $(NPROC) tau_exec ./benchmark > $(TAU_OUT_DIR)tau_results_$(NPROC)_procs.txt
 	@echo "Tau completed."
 	@echo "Results saved to $(TAU_OUT_DIR)tau_results_$(NPROC)_procs.txt."
 clean:
