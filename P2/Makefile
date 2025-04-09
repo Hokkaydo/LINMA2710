@@ -6,6 +6,8 @@ HEADERS = abstractmatrix.hpp matrix.hpp distributedmatrix.hpp globals.hpp
 NPROC = 4
 BENCH_OUT_DIR = ./
 TAU_OUT_DIR = ./
+# Ensure the output directories exist
+$(shell mkdir -p $(BENCH_OUT_DIR) $(TAU_OUT_DIR))
 
 all:
 	$(MAKE) clean && $(MAKE) run
@@ -46,6 +48,12 @@ tau: benchmark.cpp $(HEADERS) $(OBJ)
 	@mpirun -np $(NPROC) tau_exec ./benchmark > $(TAU_OUT_DIR)tau_results_$(NPROC)_procs.txt
 	@echo "Tau completed."
 	@echo "Results saved to $(TAU_OUT_DIR)tau_results_$(NPROC)_procs.txt."
+nsys:
+	@echo "Running nsys..."
+	@echo "Using $(NPROC) processes."
+	@mpirun -np $(NPROC) nsys profile --mpi=none --trace=mpi ./benchmark
+	@echo "NSYS profiling completed."
+
 clean:
 	rm -f $(OBJ) $(TARGET) *.o benchmark
 
