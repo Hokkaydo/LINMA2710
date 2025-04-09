@@ -49,7 +49,7 @@ tau: benchmark.cpp $(HEADERS) $(OBJ)
 nsys:
 	@echo "Running nsys..."
 	@echo "Using $(NPROC) processes."
-	@mpirun -np $(NPROC) nsys profile --mpi=none --trace=mpi ./benchmark
+	@mpirun -np $(NPROC) nsys profile --trace=mpi ./benchmark
 	@echo "NSYS profiling completed."
 
 clean:
