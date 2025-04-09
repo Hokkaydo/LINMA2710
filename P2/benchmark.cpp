@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     
     // Benchmark time multiply between big matrices for multiple sizes and number of processes
-    int sizeExpRangeEnd = 3; // 10^5
+    int sizeExpRangeEnd = 4; // 10^5
     int sizeExpRangeStart = 1; // 10^1
     int maxIterations = 20;
     int numProcesses;
