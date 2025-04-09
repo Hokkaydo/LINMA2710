@@ -31,26 +31,26 @@ globals.o: globals.cpp globals.hpp mlp_sgd_distributed.cpp
 run: $(TARGET)
 	mpirun -np $(NPROC) ./$(TARGET)
 
-benchmark: benchmark.cpp $(HEADERS) $(OBJ)
+build-benchmark: benchmark.cpp $(HEADERS) $(OBJ)
 	@$(CXX) $(CXXFLAGS) -o benchmark benchmark.cpp matrix.o distributedmatrix.o
-	@echo "Running benchmark..."
 	@echo "Using $(NPROC) processes."
-	@mpirun -np $(NPROC) ./benchmark > $(OUT_DIR)benchmark_results_$(NPROC)_procs.csv
-	@echo "Benchmarking completed."
-	@echo "Results saved to $(OUT_DIR)benchmark_results_$(NPROC)_procs.csv"
 
-tau: benchmark.cpp $(HEADERS) $(OBJ)
-	@$(CXX) $(CXXFLAGS) -o benchmark benchmark.cpp matrix.o distributedmatrix.o
+benchmark: build-benchmark
+	@echo "Running benchmark..."
+	@mpirun -np $(NPROC) ./benchmark > $(OUT_DIR)/procs_$(NPROC).csv
+	@echo "Benchmarking completed."
+	@echo "Results saved to $(OUT_DIR)/procs_$(NPROC).csv"
+
+tau: build-benchmark
 	@echo "Running tau..."
-	@echo "Using $(NPROC) processes."
-	@mpirun -np $(NPROC) tau_exec ./benchmark > $(OUT_DIR)tau_results_$(NPROC)_procs.txt
+	@mpirun -np $(NPROC) tau_exec ./benchmark > $(OUT_DIR)/procs_$(NPROC).txt
 	@echo "Tau completed."
-	@echo "Results saved to $(OUT_DIR)tau_results_$(NPROC)_procs.txt."
-nsys: benchmark.cpp $(HEADERS) $(OBJ)
-	@$(CXX) $(CXXFLAGS) -o benchmark benchmark.cpp matrix.o distributedmatrix.o
+	@echo "Results saved to $(OUT_DIR)/procs_$(NPROC).txt"
+	
+nsys: build-benchmark
 	@echo "Running nsys..."
 	@echo "Using $(NPROC) processes."
-	@mpirun -np $(NPROC) nsys profile --trace=mpi ./benchmark
+	@mpirun -np $(NPROC) nsys profile --trace=mpi ./benchmark > $(OUT_DIR)/procs_$(NPROC).txt
 	@echo "NSYS profiling completed."
 
 clean:
