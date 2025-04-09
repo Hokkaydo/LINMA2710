@@ -5,6 +5,7 @@ OBJ = matrix.o distributedmatrix.o distributedtests.o mlp_sgd_distributed.o glob
 HEADERS = abstractmatrix.hpp matrix.hpp distributedmatrix.hpp globals.hpp
 NPROC = 4
 BENCH_OUT_DIR = ./
+TAU_OUT_DIR = ./
 
 all:
 	$(MAKE) clean && $(MAKE) run
@@ -34,9 +35,17 @@ benchmark: benchmark.cpp $(HEADERS) $(OBJ)
 	@$(CXX) $(CXXFLAGS) -o benchmark benchmark.cpp matrix.o distributedmatrix.o
 	@echo "Running benchmark..."
 	@echo "Using $(NPROC) processes."
-	@mpirun -np $(NPROC) ./benchmark > $(BENCH_OUT_DIR)benchmark_results_$(NPROC)_procs.txt
+	@mpirun -np $(NPROC) ./benchmark > $(BENCH_OUT_DIR)benchmark_results_$(NPROC)_procs.csv
 	@echo "Benchmarking completed."
-	@echo "Results saved to $(BENCH_OUT_DIR)benchmark_results_$(NPROC)_procs.txt."
+	@echo "Results saved to $(BENCH_OUT_DIR)benchmark_results_$(NPROC)_procs.csv"
+
+tau: benchmark.cpp $(HEADERS) $(OBJ)
+	@$(CXX) $(CXXFLAGS) -o benchmark benchmark.cpp matrix.o distributedmatrix.o
+	@echo "Running tau..."
+	@echo "Using $(NPROC) processes."
+	@mpirun -np $(NPROC) tau_exec -T mpi ./$(TARGET) > $(TAU_OUT_DIR)tau_results_$(NPROC)_procs.txt
+	@echo "Tau completed."
+	@echo "Results saved to $(TAU_OUT_DIR)tau_results_$(NPROC)_procs.txt."
 clean:
 	rm -f $(OBJ) $(TARGET) *.o benchmark
 
