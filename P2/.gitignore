@@ -3,3 +3,4 @@ benchmark
 benchmark_results.txt
 distributedtests
 *.o
+results/**

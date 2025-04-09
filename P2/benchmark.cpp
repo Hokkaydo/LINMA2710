@@ -1,6 +1,7 @@
 #include "distributedmatrix.hpp"
 #include <iostream>
 #include <math.h>
+#include <chrono>
 
 int main(int argc, char** argv) {
     // Initialize MPI
@@ -40,16 +41,17 @@ int main(int argc, char** argv) {
         DistributedMatrix distB(B, numProcesses);
         
         // Start timing
-        double startTime = MPI_Wtime();
+        auto startTime = std::chrono::high_resolution_clock::now();
         
         // Perform multiplication
         Matrix res = distA.multiplyTransposed(distB);
         
         // End timing
-        double endTime = MPI_Wtime();
-        
+        auto endTime = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(endTime - startTime);
+
         if (rank == 0) {
-            std::cout << size << "," << (endTime - startTime) << std::endl;
+            std::cout << size << "," << duration.count() << std::endl;
         }
     }
     // Finalize MPI
