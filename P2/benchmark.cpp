@@ -36,14 +36,14 @@ int main(int argc, char** argv) {
         }
         
         // Create distributed matrices
-        DistributedMatrix distA(A, numProcesses);
-        DistributedMatrix distB(B, numProcesses);
+        // DistributedMatrix distA(A, numProcesses);
+        // DistributedMatrix distB(B, numProcesses);
         
         // Start timing
         double startTime = MPI_Wtime();
         
         // Perform multiplication
-        Matrix res = distA.multiplyTransposed(distB);
+        // Matrix res = distA.multiplyTransposed(distB);
         
         // End timing
         double endTime = MPI_Wtime();
