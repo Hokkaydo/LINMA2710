@@ -46,7 +46,7 @@ tau: benchmark.cpp $(HEADERS) $(OBJ)
 	@mpirun -np $(NPROC) tau_exec ./benchmark > $(OUT_DIR)tau_results_$(NPROC)_procs.txt
 	@echo "Tau completed."
 	@echo "Results saved to $(OUT_DIR)tau_results_$(NPROC)_procs.txt."
-nsys:
+nsys: benchmark.cpp $(HEADERS) $(OBJ)
 	@echo "Running nsys..."
 	@echo "Using $(NPROC) processes."
 	@mpirun -np $(NPROC) nsys profile --trace=mpi ./benchmark
