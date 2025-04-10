@@ -50,7 +50,7 @@ tau: build-benchmark
 nsys: build-benchmark
 	@echo "Running nsys..."
 	@echo "Using $(NPROC) processes."
-	@mpirun -np $(NPROC) nsys profile --trace=mpi ./benchmark > $(OUT_DIR)/procs_$(NPROC).txt
+	@nsys profile --trace=mpi,cuda,osrt,cublas,nvtx --mpi-impl=openmpi --stats=true mpirun -n $(NPROC) ./benchmark > $(OUT_DIR)/procs_$(NPROC).txt
 	@echo "NSYS profiling completed."
 
 clean:
