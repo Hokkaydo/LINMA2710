@@ -40,12 +40,6 @@ benchmark: build-benchmark
 	@mpirun -np $(NPROC) ./benchmark > $(OUT_DIR)/procs_$(NPROC).csv
 	@echo "Benchmarking completed."
 	@echo "Results saved to $(OUT_DIR)/procs_$(NPROC).csv"
-
-tau: build-benchmark
-	@echo "Running tau..."
-	@mpirun -np $(NPROC) tau_exec ./benchmark > $(OUT_DIR)/procs_$(NPROC).txt
-	@echo "Tau completed."
-	@echo "Results saved to $(OUT_DIR)/procs_$(NPROC).txt"
 	
 nsys: build-benchmark
 	@echo "Running nsys..."
