@@ -16,11 +16,9 @@ $(TARGET): $(OBJ)
 
 matrix.o: matrix.cpp matrix.hpp abstractmatrix.hpp
 	$(CXX) $(CXXFLAGS) -c matrix.cpp
-	ls -la
 
 distributedmatrix.o: distributedmatrix.cpp distributedmatrix.hpp matrix.hpp abstractmatrix.hpp
 	$(CXX) $(CXXFLAGS) -c distributedmatrix.cpp
-	ls -la
 
 distributedtests.o: distributedtests.cpp distributedmatrix.hpp matrix.hpp abstractmatrix.hpp
 	$(CXX) $(CXXFLAGS) -c distributedtests.cpp
@@ -30,7 +28,6 @@ mlp_sgd_distributed.o: mlp_sgd_distributed.cpp globals.hpp abstractmatrix.hpp ma
 
 globals.o: globals.cpp globals.hpp mlp_sgd_distributed.cpp
 	$(CXX) $(CXXFLAGS) -c globals.cpp
-	ls -la
 
 run: $(TARGET)
 	mpirun -np $(NPROC) ./$(TARGET)
