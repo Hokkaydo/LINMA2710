@@ -38,14 +38,13 @@ build-benchmark: benchmark.cpp $(HEADERS) $(BENCH_OBJ)
 
 benchmark: build-benchmark
 	@echo "Running benchmark..."
-	@mpirun -np $(NPROC) ./benchmark $(BENCH_ARGS) > $(OUT_DIR)/procs_$(NPROC).csv
+	@mpirun -np $(NPROC) ./benchmark $(BENCH_ARGS) > $(OUT_DIR)/procs_$(NPROC)_size_$(BENCH_ARGS).csv
 	@echo "Benchmarking completed."
-	@echo "Results saved to $(OUT_DIR)/procs_$(NPROC).csv"
+	@echo "Results saved to $(OUT_DIR)/procs_$(NPROC)_size_$(BENCH_ARGS).csv"
 	
 nsys: build-benchmark
 	@echo "Running nsys..."
-	@echo "Using $(NPROC) processes."
-	@nsys profile --trace=mpi,cuda,osrt,cublas,nvtx --mpi-impl=openmpi --stats=true mpirun -n $(NPROC) ./benchmark $(BENCH_ARGS) > $(OUT_DIR)/procs_$(NPROC).txt
+	@nsys profile --trace=mpi,cuda,osrt,cublas,nvtx --mpi-impl=openmpi --stats=true mpirun -n $(NPROC) ./benchmark $(BENCH_ARGS) > $(OUT_DIR)/procs_$(NPROC)_size_$(BENCH_ARGS).txt
 	@echo "NSYS profiling completed."
 
 clean:
