@@ -1,3 +1,4 @@
+# To sync this, clone `https://github.com/VictorEijkhout/TheArtOfHPC_vol2_parallelprogramming` the parent of the folder of this repository and then run `julia sync.jl`
 function sync(book_dir)
     mpi_c = joinpath(book_dir, "examples/mpi/c")
     dest_dir = @__DIR__

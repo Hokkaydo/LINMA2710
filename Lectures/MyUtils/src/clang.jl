@@ -24,6 +24,10 @@ struct CLCode <: Code
     code::String
 end
 
+macro cl_str(s)
+    return :($CLCode($(esc(s))))
+end
+
 source_extension(::CCode) = "c"
 source_extension(::CppCode) = "cpp"
 source_extension(::CLCode) = "cl"

@@ -1,5 +1,7 @@
 # LINMA2710 Scientific Computing
 
+[<img src="https://plutojl.org/assets/favicon.svg" height="20"/>![](https://img.shields.io/badge/Notebooks-View-blue.svg)<img src="https://plutojl.org/assets/favicon.svg" height="20"/>](https://blegat.github.io/LINMA2710/)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1MWAwv3qeaX97nCNBc7adeukaK7vqc_KO?usp=sharing)
 [<img src="https://upload.wikimedia.org/wikipedia/commons/7/72/UCLouvain_logo.svg" height="20"/>](https://uclouvain.be/en-cours-2024-linma2710)
 [<img src="https://upload.wikimedia.org/wikipedia/commons/c/c6/Moodle-logo.svg" height="16"/>](https://moodle.uclouvain.be/enrol/index.php?id=2951)
 
@@ -47,6 +49,14 @@ Follow [this guide](https://support.ceci-hpc.be/doc/_contents/ManagingFiles/Tran
 ```
 It might however be a bit tedious to keep the files in sync with `scp`. I recommend pushing your project in a **private** (don't use a public git as your code shouldn't be accessible to other students!) git (for instance in https://forge.uclouvain.be/) and pull it from the CECI cluster. You can then easily update the code on the CECI cluster with `git pull`.
 **Important** do not sync the binaries of with the CECI cluster as you might have a different architecture. Exclude them from the git by adding them in the `.gitignore` file and simply recompile them on the cluster.
+You can also modify the files in a folder locally using `sshfs`.
+For instance, I have a `LINMA2710` folder in my home directory on the `manneback` cluster.
+To access these files locally on a new folder `manneback`, I can do
+```sh
+(local computer)$ mkdir manneback-sshfs
+(local computer)$ sshfs manneback:/home/ucl/inma/blegat/LINMA2710 ./manneback-sshfs
+```
+You can then open the `manneback-sshfs` with your favorite IDE on your local computers and you will be modifying files directly on the cluster!
 
 ### Submit a job
 
@@ -58,12 +68,12 @@ To run your code, [submit a job with Slurm](https://support.ceci-hpc.be/doc/_con
 Use [this tool](https://www.ceci-hpc.be/scriptgen.html) to generate a submission script.
 
 > [!WARNING]
-> The `--partition` option is dependent on the the cluster. As `manneback` is not an option in the tool, use another cluster and then remove the line with `--partition`.
+> The `--partition` option is dependent on the the cluster. As `manneback` is not an option in the tool, use another cluster and then remove the line with `--partition` or update it with [one of the partition listed by `sinfo`](https://www.cism.ucl.ac.be/doc/_contents/Computing/index.html#available-hardware).
 
 Save this script as a file, say `submit.sh`. You can then use it with
 ```sh
 [blegat@mbackf1 ~] sbatch submit.sh
-```ion 
+```ion
 The output produced by the job is written in the file `slurm-<JOBID>.out` where `<JOBID>` is the job id listed in the `JOBID` column of the table outputted by
 ```sh
 [blegat@mbackf1 ~] squeue --me
@@ -114,20 +124,20 @@ If `CUDA` was precompiled on a node with no GPU (such as the login node), you wi
 ```julia
 julia> using CUDA
 ┌ Error: CUDA.jl could not find an appropriate CUDA runtime to use.
-│ 
+│
 │ CUDA.jl's JLLs were precompiled without an NVIDIA driver present.
 │ This can happen when installing CUDA.jl on an HPC log-in node,
 │ or in a container. In that case, you need to specify which CUDA
 │ version to use at run time by calling `CUDA.set_runtime_version!`
 │ or provisioning the preference it sets at compile time.
-│ 
+│
 │ If you are not running in a container or on an HPC log-in node,
 │ try re-compiling the CUDA runtime JLL and re-loading CUDA.jl:
 │      pkg = Base.PkgId(Base.UUID("76a88914-d11a-5bdc-97e0-2f5a05c973a2"),
 │                       "CUDA_Runtime_jll")
 │      Base.compilecache(pkg)
 │      # re-start Julia and re-load CUDA.jl
-│ 
+│
 │ For more details, refer to the CUDA.jl documentation at
 │ https://cuda.juliagpu.org/stable/installation/overview/
 └ @ CUDA ~/.julia/packages/CUDA/1kIOw/src/initialization.jl:118

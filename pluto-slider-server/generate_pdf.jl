@@ -8,4 +8,4 @@ function generate_pdfs(dir)
     end
 end
 
-generate_pdfs(dirname(dirname(joinpath(@__DIR__))))
+generate_pdfs(joinpath(dirname(joinpath(@__DIR__)), "Lectures"))

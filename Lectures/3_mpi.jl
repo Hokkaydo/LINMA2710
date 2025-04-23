@@ -665,7 +665,7 @@ frametitle("Profiling with NVIDIA Nsight Systems")
 
 # ╔═╡ 091dd042-580b-4fda-8086-e048663aed6c
 md"""
-* NVIDIA Nsight Systems $(img("https://developer.download.nvidia.com/images/nvidia-nsight-systems-icon-gbp-shaded-256.png", :width => "20pt")) can provile CUDA code but also MPI
+* NVIDIA Nsight Systems $(img("https://developer.download.nvidia.com/images/nvidia-nsight-systems-icon-gbp-shaded-256.png", :width => "20pt")) can profile CUDA code but also MPI
 * Available on `manneback` after loading `CUDA` with $(img("https://github.com/TACC/Lmod/raw/main/logos/2x/Lmod-4color%402x.png", :height => "20px"))
 
 ```sh
