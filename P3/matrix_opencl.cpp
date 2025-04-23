@@ -45,42 +45,83 @@ cl::Program loadAndBuildProgram(cl::Context context,
 // ---------------------------------------------------------------------------
 const std::string kernel_source_fill = R"(
     __kernel void fill(__global float* matrix, float value, int rows, int cols) {
-        TODO (provided function signatures can be changed)
+        int idx = get_global_id(0);
+        int total_elements = rows * cols;
+        if (idx < total_elements) {
+            matrix[idx] = value;
+        }
     }
 )";
 const std::string kernel_source_add = R"(
     __kernel void add(__global const float* A, __global const float* B, __global float* C, int rows, int cols) {
-        TODO (provided function signatures can be changed)
+        int idx = get_global_id(0);
+        int total_elements = rows * cols;
+        if (idx < total_elements) {
+            C[idx] = A[idx] + B[idx];
+        }
     }
 )";
 const std::string kernel_source_sub_mul = R"(
     __kernel void sub_mul(__global float* A, __global const float* B, float scalar, int rows, int cols) {
-        TODO (provided function signatures can be changed)
+        int idx = get_global_id(0);
+        int total_elements = rows * cols;
+        if (idx < total_elements) {
+            A[idx] -= scalar * B[idx];
+        }
     }
 )";
 const std::string kernel_source_transpose = R"(
     __kernel void transpose(__global const float* A, __global float* B, int A_rows, int A_cols) {
-        TODO (provided function signatures can be changed)
+        int row = get_global_id(0);
+        int col = get_global_id(1);
+        if (row < A_rows && col < A_cols) {
+            B[col * A_rows + row] = A[row * A_cols + col];
+        }
     }
 )";
 const std::string kernel_source_matrix_mul = R"(
     __kernel void matrix_mul(__global const float* A, __global const float* B, __global float* C, int A_rows, int A_cols, int B_cols) {
-        TODO (provided function signatures can be changed)
+        int row = get_global_id(0);
+        int col = get_global_id(1);
+        if (row < A_rows && col < B_cols) {
+            float sum = 0.0f;
+            for (int k = 0; k < A_cols; ++k) {
+                sum += A[row * A_cols + k] * B[k * B_cols + col];
+            }
+            C[row * B_cols + col] = sum;
+        }
     }
 )";
 const std::string kernel_source_sigmoid = R"(
     __kernel void sigmoid(__global const float* input, __global float* output, int rows, int cols) {
-        TODO (provided function signatures can be changed)
+        int idx = get_global_id(0);
+        int total_elements = rows * cols;
+        if (idx < total_elements) {
+            float x = input[idx];
+            output[idx] = 1.0f / (1.0f + exp(-x));
+        }
     }
 )";
 const std::string kernel_source_sigmoid_backward = R"(
     __kernel void sigmoid_backward(__global float* grad_acc, __global const float* input, __global const float* out_grad, int rows, int cols) {
-        TODO (provided function signatures can be changed)
+        int idx = get_global_id(0);
+        int total_elements = rows * cols;
+        if (idx < total_elements) {
+            float x = input[idx];
+            float s = 1.0f / (1.0f + exp(-x));
+            grad_acc[idx] += out_grad[idx] * s * (1.0f - s);
+        }
     }
 )";
 const std::string kernel_source_bce_elementwise = R"(
      __kernel void bce_elementwise(__global const float* predictions, __global const float* targets, __global float* elementwise_loss, int rows, int cols, float epsilon) {
-        TODO (provided function signatures can be changed)
+        int idx = get_global_id(0); int total_elements = rows * cols;
+        if (idx < total_elements) {
+            float pred = predictions[idx]; float targ = targets[idx];
+            float denominator1 = max(pred + epsilon, epsilon); // Avoid exactly zero denominator
+            float denominator2 = max(1.0f - pred + epsilon, epsilon);
+            elementwise_loss[idx] = -(targ * log(denominator1) + (1.0f - targ) * log(denominator2));
+        }
     }
 )";
 const std::string kernel_source_bce_backward = R"(
@@ -172,19 +213,286 @@ size_t MatrixCL::buffer_size_bytes() const {
     return static_cast<size_t>(rows_) * cols_ * sizeof(float);
 }
 
+// --- Constructors ---
+// Creates a matrix initialized with zero elements or optional initial data
+MatrixCL::MatrixCL(int rows, int cols, cl::Context context, cl::CommandQueue queue, const std::vector<float>* initial_data) {
+    if (rows <= 0 || cols <= 0) {
+        throw std::invalid_argument("Matrix dimensions must be positive.");
+    }
+    rows_ = rows;
+    cols_ = cols;
+    context_ = context;
+    queue_ = queue;
 
+    buffer_ = cl::Buffer(context, CL_MEM_READ_WRITE, buffer_size_bytes());
 
+    if (initial_data) {
+        if (initial_data->size() != static_cast<size_t>(rows) * cols) {
+            throw std::invalid_argument("Initial data size does not match matrix dimensions.");
+        }
+        queue.enqueueWriteBuffer(buffer_, CL_TRUE, 0, buffer_size_bytes(), initial_data->data());
+    } else {
+        fill(0.0f);
+    }
+}
 
+// Copy constructor (performs device-to-device copy)
+MatrixCL::MatrixCL(const MatrixCL& other) {
+    rows_ = other.rows_;
+    cols_ = other.cols_;
+    context_ = other.context_;
+    queue_ = other.queue_;
+    buffer_ = cl::Buffer(context_, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, other.buffer_size_bytes(), nullptr);
+    
+    queue_.enqueueCopyBuffer(other.buffer_, buffer_, 0, 0, buffer_size_bytes());
+}
 
+// Destructor (cl::Buffer manages its own release via RAII)
 
+// Copy assignment operator
+MatrixCL& MatrixCL::operator=(const MatrixCL& other) {
+    if (this != &other) {
+        rows_ = other.rows_;
+        cols_ = other.cols_;
+        context_ = other.context_;
+        queue_ = other.queue_;
+        buffer_ = cl::Buffer(context_, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, other.buffer_size_bytes(), nullptr);
+        
+        queue_.enqueueCopyBuffer(other.buffer_, buffer_, 0, 0, buffer_size_bytes());
+    }
+    return *this;
+}
 
-/* TODO */
+// Getters
+int MatrixCL::numRows() const {
+    return rows_;
+}
+int MatrixCL::numCols() const {
+    return cols_;
+}
+cl::Context MatrixCL::getContext() const {
+    return context_;
+}
+cl::CommandQueue MatrixCL::getQueue() const {
+    return queue_;
+}
+const cl::Buffer& MatrixCL::getBuffer() const {
+    return buffer_;
+} // Read-only access to buffer
 
+// Copy data from device buffer back to host in an std::vector
+std::vector<float> MatrixCL::copyToHost() const {
+    std::vector<float> host_data(rows_ * cols_);
+    queue_.enqueueReadBuffer(buffer_, CL_TRUE, 0, buffer_size_bytes(), host_data.data());
+    return host_data;
+}
 
+// --- Operations (Must be implemented with OpenCL Kernels) ---
+// Fill the entire matrix with a single value
+void MatrixCL::fill(float value) {
+    if (rows_ <= 0 || cols_ <= 0) {
+        throw std::invalid_argument("Matrix dimensions must be positive.");
+    }
+    try {
+        cl::Kernel kernel = kernels_->kernel_fill;
+        kernel.setArg(0, buffer_); 
+        kernel.setArg(1, value);
+        kernel.setArg(2, rows_);
+        kernel.setArg(3, cols_);
 
+        size_t global_work_size = static_cast<size_t>(rows_) * cols_;
+        queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(global_work_size), cl::NullRange);
+    } catch (const cl::Error& err) {
+        throw std::runtime_error("OpenCL error during fill: " + std::string(err.what()) + " (" + std::to_string(err.err()) + ")");
+    } catch (const std::runtime_error& err) {
+        throw std::runtime_error("Error during fill: " + std::string(err.what()));
+    }
+}
 
+// Addition: C = A + B
+MatrixCL MatrixCL::operator+(const MatrixCL& other) const {
+    if (rows_ != other.numRows() || cols_ != other.numCols()) {
+        throw std::invalid_argument("Matrix dimensions must match for addition.");
+    }
+    if (context_() != other.getContext()() || queue_() != other.getQueue()()) {
+        throw std::runtime_error("Cannot add matrices from different OpenCL contexts or queues.");
+    }
 
+    MatrixCL result(rows_, cols_, context_, queue_);
+    try {
+        cl::Kernel kernel = kernels_->kernel_add; 
+        kernel.setArg(0, buffer_);
+        kernel.setArg(1, other.getBuffer());
+        kernel.setArg(2, result.getBuffer()); 
+        kernel.setArg(3, rows_);
+        kernel.setArg(4, cols_);
 
+        size_t global_work_size = static_cast<size_t>(rows_) * cols_;
+        queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(global_work_size), cl::NullRange);
+    } catch (const cl::Error& err) {
+        throw std::runtime_error("OpenCL error during addition: " + std::string(err.what()) + " (" + std::to_string(err.err()) + ")");
+    } catch (const std::runtime_error& err) {
+        throw std::runtime_error("Error during addition: " + std::string(err.what()));
+    }
+    return result;
+}
+
+// Matrix multiplication: C = A * B
+MatrixCL MatrixCL::operator*(const MatrixCL& other) const {
+    if (cols_ != other.numRows()) {
+        throw std::invalid_argument("Matrix dimensions do not match for multiplication.");
+    }
+    if (context_() != other.getContext()() || queue_() != other.getQueue()()) {
+        throw std::runtime_error("Cannot multiply matrices from different OpenCL contexts or queues.");
+    }
+
+    MatrixCL result(rows_, other.numCols(), context_, queue_);
+    try {
+        cl::Kernel kernel = kernels_->kernel_matrix_mul; 
+        kernel.setArg(0, buffer_);
+        kernel.setArg(1, other.getBuffer());
+        kernel.setArg(2, result.getBuffer()); 
+        kernel.setArg(3, rows_);
+        kernel.setArg(4, cols_);
+        kernel.setArg(5, other.numCols());
+
+        size_t global_work_size = static_cast<size_t>(rows_) * other.numCols();
+        queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(global_work_size), cl::NullRange);
+    } catch (const cl::Error& err) {
+        throw std::runtime_error("OpenCL error during matrix multiplication: " + std::string(err.what()) + " (" + std::to_string(err.err()) + ")");
+    } catch (const std::runtime_error& err) {
+        throw std::runtime_error("Error during matrix multiplication: " + std::string(err.what()));
+    }
+    return result;
+}
+
+// Transpose: returns a new Matrix that is the transpose (B = A^T)
+MatrixCL MatrixCL::transpose() const {
+    MatrixCL result(cols_, rows_, context_, queue_);
+    try {
+        cl::Kernel kernel = kernels_->kernel_transpose;
+        kernel.setArg(0, buffer_);
+        kernel.setArg(1, result.getBuffer());
+        kernel.setArg(2, rows_);
+        kernel.setArg(3, cols_);
+        size_t global_work_size = static_cast<size_t>(rows_) * cols_;
+        queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(global_work_size), cl::NullRange);
+    } catch (const cl::Error& err) {    
+        throw std::runtime_error("OpenCL error during transpose: " + std::string(err.what()) + " (" + std::to_string(err.err()) + ")");
+    } catch (const std::runtime_error& err) {
+        throw std::runtime_error("Error during transpose: " + std::string(err.what()));
+    }
+    return result;
+}
+
+// Subtract the product of a scalar and a given matrix: "this = this - scalar * other"
+// Performs the operation in-place on 'this' matrix's buffer.
+void MatrixCL::sub_mul(float scalar, const MatrixCL& other) {
+    if (rows_ != other.numRows() || cols_ != other.numCols()) {
+        throw std::invalid_argument("Matrix dimensions must match for subtraction.");
+    }
+    if (context_() != other.getContext()() || queue_() != other.getQueue()()) {
+        throw std::runtime_error("Cannot subtract matrices from different OpenCL contexts or queues.");
+    }
+
+    try {
+        cl::Kernel kernel = kernels_->kernel_sub_mul; 
+        kernel.setArg(0, buffer_); 
+        kernel.setArg(1, other.getBuffer());
+        kernel.setArg(2, scalar);
+        kernel.setArg(3, rows_);
+        kernel.setArg(4, cols_);
+
+        size_t global_work_size = static_cast<size_t>(rows_) * cols_;
+        queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(global_work_size), cl::NullRange);
+    } catch (const cl::Error& err) {
+        throw std::runtime_error("OpenCL error during subtraction: " + std::string(err.what()) + " (" + std::to_string(err.err()) + ")");
+    } catch (const std::runtime_error& err) {
+        throw std::runtime_error("Error during subtraction: " + std::string(err.what()));
+    }
+}
+
+// Applies sigmoid element-wise: Returns a matrix containing sigmoid(this)
+MatrixCL MatrixCL::sigmoid() const {
+    MatrixCL result(rows_, cols_, context_, queue_);
+    try {
+        cl::Kernel kernel = kernels_->kernel_sigmoid; 
+        kernel.setArg(0, buffer_); 
+        kernel.setArg(1, result.getBuffer()); 
+        kernel.setArg(2, rows_);
+        kernel.setArg(3, cols_);
+
+        size_t global_work_size = static_cast<size_t>(rows_) * cols_;
+        queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(global_work_size), cl::NullRange);
+    } catch (const cl::Error& err) {
+        throw std::runtime_error("OpenCL error during sigmoid: " + std::string(err.what()) + " (" + std::to_string(err.err()) + ")");
+    } catch (const std::runtime_error& err) {
+        throw std::runtime_error("Error during sigmoid: " + std::string(err.what()));
+    }
+    return result;
+}
+// Calculates gradient for sigmoid and adds it to 'this' matrix (gradient accumulator).
+void MatrixCL::sigmoid_backward(const MatrixCL& input_values, const MatrixCL& output_gradient) {
+    if (rows_ != input_values.numRows() || cols_ != input_values.numCols() ||
+        rows_ != output_gradient.numRows() || cols_ != output_gradient.numCols()) {
+        throw std::invalid_argument("Matrix dimensions must match for sigmoid_backward.");
+    }
+    if (context_() != input_values.getContext()() || queue_() != input_values.getQueue()() ||
+        context_() != output_gradient.getContext()() || queue_() != output_gradient.getQueue()()) {
+         throw std::runtime_error("Cannot perform sigmoid backward update on matrices from different OpenCL contexts or queues.");
+    }
+
+    size_t num_elements = static_cast<size_t>(rows_) * cols_;
+     if (num_elements == 0) return;
+
+    try {
+        cl::Kernel kernel = kernels_->kernel_sigmoid_backward; // Use cached kernel
+
+        kernel.setArg(0, this->buffer_);            // gradient_accumulator (read-write)
+        kernel.setArg(1, input_values.getBuffer());  // input_values (read-only)
+        kernel.setArg(2, output_gradient.getBuffer()); // output_gradient (read-only)
+        kernel.setArg(3, rows_);
+        kernel.setArg(4, cols_);
+
+        size_t global_work_size = num_elements;
+        queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(global_work_size), cl::NullRange);
+
+    } catch (const cl::Error& err) {
+        throw std::runtime_error("OpenCL error during sigmoid_backward: " + std::string(err.what()) + " (" + std::to_string(err.err()) + ")");
+    } catch (const std::runtime_error& err) {
+         throw std::runtime_error("Error during sigmoid_backward: " + std::string(err.what()));
+    }
+}
+
+// Calculates Binary Cross-Entropy Loss between the entries of 'this' matrix and the target matrix element-wise. Returns a MatrixCL containing the losses.
+MatrixCL MatrixCL::binary_cross_entropy(const MatrixCL& targets) const {
+    if (rows_ != targets.numRows() || cols_ != targets.numCols()) {
+        throw std::invalid_argument("Matrix dimensions must match for binary_cross_entropy.");
+    }
+    if (context_() != targets.getContext()() || queue_() != targets.getQueue()()) {
+        throw std::runtime_error("Cannot calculate BCE on matrices from different OpenCL contexts or queues.");
+    }
+
+    MatrixCL result(rows_, cols_, context_, queue_);
+    try {
+        cl::Kernel kernel = kernels_->kernel_bce_elementwise; // Use cached kernel
+        kernel.setArg(0, buffer_);            // predictions (read-only)
+        kernel.setArg(1, targets.getBuffer()); // targets (read-only)
+        kernel.setArg(2, result.getBuffer());  // elementwise_loss (write-only)
+        kernel.setArg(3, rows_);
+        kernel.setArg(4, cols_);
+        kernel.setArg(5, 1e-8f); // epsilon
+
+        size_t global_work_size = static_cast<size_t>(rows_) * cols_;
+        queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(global_work_size), cl::NullRange);
+
+    } catch (const cl::Error& err) {
+        throw std::runtime_error("OpenCL error during binary_cross_entropy: " + std::string(err.what()) + " (" + std::to_string(err.err()) + ")");
+    } catch (const std::runtime_error& err) {
+         throw std::runtime_error("Error during binary_cross_entropy: " + std::string(err.what()));
+    }
+    return result;
+}
 
 void MatrixCL::binary_cross_entropy_backward(const MatrixCL& predictions, const MatrixCL& targets) {
      if (rows_ != predictions.numRows() || cols_ != predictions.numCols() ||
