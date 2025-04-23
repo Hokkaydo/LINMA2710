@@ -26,7 +26,7 @@ int bench(int size, int numProcesses) {
 
     return duration.count();
 }
-
+ 
 int main(int argc, char** argv) {
 
     int initialized;

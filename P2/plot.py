@@ -10,7 +10,7 @@ import re
 def plot_benchmark():
     val = None
 
-    fig, axes = plt.subplots(1, 2, figsize=(12, 6))
+    fig, axes = plt.subplots(1, 2, figsize=(12, 8))
 
     val_16procs = pd.read_csv("results/benchmark_results_16_procs.csv")[1:]
 
@@ -29,7 +29,7 @@ def plot_benchmark():
 
     axes[0].plot(x, x**2.5, label=r'$\mathcal{O}(n^{2.5})$', linestyle='--', color='black')
     axes[0].set_xlabel('Size')
-    axes[0].set_ylabel(r'Time ($\mu$s)')
+    axes[0].set_ylabel('Time (ns)')
     axes[0].set_title('Benchmarks of "DistributedMatrix::multiplyTransposed"\n operation for multiple processors and sizes')
     axes[0].legend()
     axes[0].set_xscale('log')
@@ -185,7 +185,7 @@ def plot_nsys():
     
         
 
-# plot_benchmark()
-plot_nsys()
+plot_benchmark()
+# plot_nsys()
 plt.show()
     

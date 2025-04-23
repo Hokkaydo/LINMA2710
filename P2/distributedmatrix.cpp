@@ -6,14 +6,11 @@
 //      Extract the columns that should be handled by this process in localData
 DistributedMatrix::DistributedMatrix(const Matrix &matrix, int numProcesses) : globalRows(matrix.numRows()), globalCols(matrix.numCols()), numProcesses(numProcesses), localData(matrix.numRows(), 0) {
     
-    // Get the rank of the current process
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    // Calculate the number of columns that each process will handle
     localCols = globalCols / numProcesses;
     localCols += (rank < globalCols % numProcesses) ? 1 : 0;
 
-    // Calculate the starting column index for this process
     startCol = 0;
     for (int i = 0; i < rank; i++)
     {
@@ -25,7 +22,7 @@ DistributedMatrix::DistributedMatrix(const Matrix &matrix, int numProcesses) : g
     }
 
     this->localData = Matrix(matrix.numRows(), localCols);
-    // Extract the columns that should be handled by this process
+
     for (int i = 0; i < matrix.numRows(); i++)
     {
         for (int j = 0; j < localCols; j++)
@@ -55,7 +52,6 @@ DistributedMatrix::DistributedMatrix(const Matrix &localData, int numProcesses, 
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     }
 
-// Implementation of AbstractMatrix interface
 int DistributedMatrix::numRows() const {
     return globalRows;
 }
