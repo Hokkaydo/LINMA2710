@@ -277,137 +277,102 @@ std::vector<float> MatrixCL::copyToHost() const {
 // --- Operations (Must be implemented with OpenCL Kernels) ---
 // Fill the entire matrix with a single value
 void MatrixCL::fill(float value) {
-    try {
-        cl::Kernel kernel = kernels_->kernel_fill;
-        kernel.setArg(0, buffer_); 
-        kernel.setArg(1, value);
-        kernel.setArg(2, rows_);
-        kernel.setArg(3, cols_);
+    cl::Kernel kernel = kernels_->kernel_fill;
+    kernel.setArg(0, buffer_); 
+    kernel.setArg(1, value);
+    kernel.setArg(2, rows_);
+    kernel.setArg(3, cols_);
 
-        queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(rows_ * cols_), cl::NullRange);
-    } catch (const cl::Error& err) {
-        throw std::runtime_error("OpenCL error during fill: " + std::string(err.what()) + " (" + std::to_string(err.err()) + ")");
-    } catch (const std::runtime_error& err) {
-        throw std::runtime_error("Error during fill: " + std::string(err.what()));
-    }
+    queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(rows_ * cols_), cl::NullRange);
 }
 
 // Addition: C = A + B
 MatrixCL MatrixCL::operator+(const MatrixCL& other) const {
     MatrixCL result(rows_, cols_, context_, queue_);
-    try {
-        cl::Kernel kernel = kernels_->kernel_add; 
-        kernel.setArg(0, buffer_);
-        kernel.setArg(1, other.getBuffer());
-        kernel.setArg(2, result.getBuffer()); 
-        kernel.setArg(3, rows_);
-        kernel.setArg(4, cols_);
+    
+    cl::Kernel kernel = kernels_->kernel_add; 
+    kernel.setArg(0, buffer_);
+    kernel.setArg(1, other.getBuffer());
+    kernel.setArg(2, result.getBuffer()); 
+    kernel.setArg(3, rows_);
+    kernel.setArg(4, cols_);
 
-        queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(rows_ * cols_), cl::NullRange);
-    } catch (const cl::Error& err) {
-        throw std::runtime_error("OpenCL error during addition: " + std::string(err.what()) + " (" + std::to_string(err.err()) + ")");
-    } catch (const std::runtime_error& err) {
-        throw std::runtime_error("Error during addition: " + std::string(err.what()));
-    }
+    queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(rows_ * cols_), cl::NullRange);
+    
     return result;
 }
 
 // Matrix multiplication: C = A * B
 MatrixCL MatrixCL::operator*(const MatrixCL& other) const {
     MatrixCL result(rows_, other.numCols(), context_, queue_);
-    try {
-        cl::Kernel kernel = kernels_->kernel_matrix_mul; 
-        kernel.setArg(0, buffer_);
-        kernel.setArg(1, other.getBuffer());
-        kernel.setArg(2, result.getBuffer()); 
-        kernel.setArg(3, rows_);
-        kernel.setArg(4, cols_);
-        kernel.setArg(5, other.numCols());
 
-        queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(rows_, cols_), cl::NullRange);
-    } catch (const cl::Error& err) {
-        throw std::runtime_error("OpenCL error during matrix multiplication: " + std::string(err.what()) + " (" + std::to_string(err.err()) + ")");
-    } catch (const std::runtime_error& err) {
-        throw std::runtime_error("Error during matrix multiplication: " + std::string(err.what()));
-    }
+    cl::Kernel kernel = kernels_->kernel_matrix_mul; 
+    kernel.setArg(0, buffer_);
+    kernel.setArg(1, other.getBuffer());
+    kernel.setArg(2, result.getBuffer()); 
+    kernel.setArg(3, rows_);
+    kernel.setArg(4, cols_);
+    kernel.setArg(5, other.numCols());
+
+    queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(rows_, cols_), cl::NullRange);
+
     return result;
 }
 
 // Transpose: returns a new Matrix that is the transpose (B = A^T)
 MatrixCL MatrixCL::transpose() const {
     MatrixCL result(cols_, rows_, context_, queue_);
-    try {
-        cl::Kernel kernel = kernels_->kernel_transpose;
-        kernel.setArg(0, buffer_);
-        kernel.setArg(1, result.getBuffer());
-        kernel.setArg(2, rows_);
-        kernel.setArg(3, cols_);
-        queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(rows_, cols_));
-    } catch (const cl::Error& err) {    
-        throw std::runtime_error("OpenCL error during transpose: " + std::string(err.what()) + " (" + std::to_string(err.err()) + ")");
-    } catch (const std::runtime_error& err) {
-        throw std::runtime_error("Error during transpose: " + std::string(err.what()));
-    }
+    
+    cl::Kernel kernel = kernels_->kernel_transpose;
+    kernel.setArg(0, buffer_);
+    kernel.setArg(1, result.getBuffer());
+    kernel.setArg(2, rows_);
+    kernel.setArg(3, cols_);
+    queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(rows_, cols_));
+    
     return result;
 }
 
 // Subtract the product of a scalar and a given matrix: "this = this - scalar * other"
 // Performs the operation in-place on 'this' matrix's buffer.
 void MatrixCL::sub_mul(float scalar, const MatrixCL& other) {
-    try {
-        cl::Kernel kernel = kernels_->kernel_sub_mul; 
-        kernel.setArg(0, buffer_); 
-        kernel.setArg(1, other.getBuffer());
-        kernel.setArg(2, scalar);
-        kernel.setArg(3, rows_);
-        kernel.setArg(4, cols_);
+    cl::Kernel kernel = kernels_->kernel_sub_mul; 
 
-        queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(rows_ * cols_));
-    } catch (const cl::Error& err) {
-        throw std::runtime_error("OpenCL error during subtraction: " + std::string(err.what()) + " (" + std::to_string(err.err()) + ")");
-    } catch (const std::runtime_error& err) {
-        throw std::runtime_error("Error during subtraction: " + std::string(err.what()));
-    }
+    kernel.setArg(0, buffer_); 
+    kernel.setArg(1, other.getBuffer());
+    kernel.setArg(2, scalar);
+    kernel.setArg(3, rows_);
+    kernel.setArg(4, cols_);
+
+    queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(rows_ * cols_));
 }
 
 // Applies sigmoid element-wise: Returns a matrix containing sigmoid(this)
 MatrixCL MatrixCL::sigmoid() const {
     MatrixCL result(rows_, cols_, context_, queue_);
-    try {
-        cl::Kernel kernel = kernels_->kernel_sigmoid; 
-        kernel.setArg(0, buffer_); 
-        kernel.setArg(1, result.getBuffer()); 
-        kernel.setArg(2, rows_);
-        kernel.setArg(3, cols_);
+    
+    cl::Kernel kernel = kernels_->kernel_sigmoid; 
 
-        queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(rows_ * cols_));
-    } catch (const cl::Error& err) {
-        throw std::runtime_error("OpenCL error during sigmoid: " + std::string(err.what()) + " (" + std::to_string(err.err()) + ")");
-    } catch (const std::runtime_error& err) {
-        throw std::runtime_error("Error during sigmoid: " + std::string(err.what()));
-    }
+    kernel.setArg(0, buffer_); 
+    kernel.setArg(1, result.getBuffer()); 
+    kernel.setArg(2, rows_);
+    kernel.setArg(3, cols_);
+
+    queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(rows_ * cols_));
+
     return result;
 }
 // Calculates gradient for sigmoid and adds it to 'this' matrix (gradient accumulator).
 void MatrixCL::sigmoid_backward(const MatrixCL& input_values, const MatrixCL& output_gradient) {
-    const size_t num_elements = rows_ * cols_;
+    cl::Kernel kernel = kernels_->kernel_sigmoid_backward;  
 
-    try {
-        cl::Kernel kernel = kernels_->kernel_sigmoid_backward;  
+    kernel.setArg(0, this->buffer_);                        // gradient_accumulator
+    kernel.setArg(1, input_values.getBuffer());             
+    kernel.setArg(2, output_gradient.getBuffer());          
+    kernel.setArg(3, rows_);
+    kernel.setArg(4, cols_);
 
-        kernel.setArg(0, this->buffer_);                        // gradient_accumulator
-        kernel.setArg(1, input_values.getBuffer());             
-        kernel.setArg(2, output_gradient.getBuffer());          
-        kernel.setArg(3, rows_);
-        kernel.setArg(4, cols_);
-
-        queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(num_elements));
-
-    } catch (const cl::Error& err) {
-        throw std::runtime_error("OpenCL error during sigmoid_backward: " + std::string(err.what()) + " (" + std::to_string(err.err()) + ")");
-    } catch (const std::runtime_error& err) {
-         throw std::runtime_error("Error during sigmoid_backward: " + std::string(err.what()));
-    }
+    queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(rows_ * cols_));
 }
 
 // Calculates Binary Cross-Entropy Loss between the entries of 'this' matrix and the target matrix element-wise. Returns a MatrixCL containing the losses.
@@ -415,23 +380,17 @@ MatrixCL MatrixCL::binary_cross_entropy(const MatrixCL& targets) const {
     MatrixCL result(rows_, cols_, context_, queue_);
 
     const float epsilon = 1e-8f;
+    cl::Kernel kernel = kernels_->kernel_bce_elementwise; 
 
-    try {
-        cl::Kernel kernel = kernels_->kernel_bce_elementwise;   
-        kernel.setArg(0, buffer_);                              // predictions
-        kernel.setArg(1, targets.getBuffer());                  
-        kernel.setArg(2, result.getBuffer());                   // elementwise_loss
-        kernel.setArg(3, rows_);
-        kernel.setArg(4, cols_);
-        kernel.setArg(5, epsilon);                              
+    kernel.setArg(0, buffer_);                              // predictions
+    kernel.setArg(1, targets.getBuffer());                  
+    kernel.setArg(2, result.getBuffer());                   // elementwise_loss
+    kernel.setArg(3, rows_);
+    kernel.setArg(4, cols_);
+    kernel.setArg(5, epsilon);                              
 
-        queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(rows_ * cols_));
+    queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(rows_ * cols_));
 
-    } catch (const cl::Error& err) {
-        throw std::runtime_error("OpenCL error during binary_cross_entropy: " + std::string(err.what()) + " (" + std::to_string(err.err()) + ")");
-    } catch (const std::runtime_error& err) {
-         throw std::runtime_error("Error during binary_cross_entropy: " + std::string(err.what()));
-    }
     return result;
 }
 
@@ -439,23 +398,15 @@ void MatrixCL::binary_cross_entropy_backward(const MatrixCL& predictions, const 
     const size_t num_elements = rows_ * cols_;
 
     const float epsilon = 1e-8f;
+    cl::Kernel kernel = kernels_->kernel_bce_backward;  
 
-    try {
-        cl::Kernel kernel = kernels_->kernel_bce_backward;  
+    kernel.setArg(0, this->buffer_);                    // gradient_accumulator
+    kernel.setArg(1, predictions.getBuffer());          
+    kernel.setArg(2, targets.getBuffer());              
+    kernel.setArg(3, rows_);
+    kernel.setArg(4, cols_);
+    kernel.setArg(5, epsilon);
+    kernel.setArg(6, 1.0f/num_elements); 
 
-        kernel.setArg(0, this->buffer_);                    // gradient_accumulator
-        kernel.setArg(1, predictions.getBuffer());          
-        kernel.setArg(2, targets.getBuffer());              
-        kernel.setArg(3, rows_);
-        kernel.setArg(4, cols_);
-        kernel.setArg(5, epsilon);
-        kernel.setArg(6, 1.0f/num_elements); 
-
-        queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(num_elements));
-
-    } catch (const cl::Error& err) {
-        throw std::runtime_error("OpenCL error during binary_cross_entropy_backward: " + std::string(err.what()) + " (" + std::to_string(err.err()) + ")");
-    } catch (const std::runtime_error& err) {
-         throw std::runtime_error("Error during binary_cross_entropy_backward: " + std::string(err.what()));
-    }
+    queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(num_elements));
 }
