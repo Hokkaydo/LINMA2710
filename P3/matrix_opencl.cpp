@@ -344,7 +344,7 @@ MatrixCL MatrixCL::transpose() const {
         kernel.setArg(1, result.getBuffer());
         kernel.setArg(2, rows_);
         kernel.setArg(3, cols_);
-        queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(rows_, cols_), cl::NullRange);
+        queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(rows_, cols_));
     } catch (const cl::Error& err) {    
         throw std::runtime_error("OpenCL error during transpose: " + std::string(err.what()) + " (" + std::to_string(err.err()) + ")");
     } catch (const std::runtime_error& err) {
