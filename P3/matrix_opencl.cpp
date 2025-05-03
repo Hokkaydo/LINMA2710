@@ -276,9 +276,6 @@ std::vector<float> MatrixCL::copyToHost() const {
 // --- Operations (Must be implemented with OpenCL Kernels) ---
 // Fill the entire matrix with a single value
 void MatrixCL::fill(float value) {
-    if (rows_ <= 0 || cols_ <= 0) {
-        throw std::invalid_argument("Matrix dimensions must be positive.");
-    }
     try {
         cl::Kernel kernel = kernels_->kernel_fill;
         kernel.setArg(0, buffer_); 
@@ -297,13 +294,6 @@ void MatrixCL::fill(float value) {
 
 // Addition: C = A + B
 MatrixCL MatrixCL::operator+(const MatrixCL& other) const {
-    if (rows_ != other.numRows() || cols_ != other.numCols()) {
-        throw std::invalid_argument("Matrix dimensions must match for addition.");
-    }
-    if (context_() != other.getContext()() || queue_() != other.getQueue()()) {
-        throw std::runtime_error("Cannot add matrices from different OpenCL contexts or queues.");
-    }
-
     MatrixCL result(rows_, cols_, context_, queue_);
     try {
         cl::Kernel kernel = kernels_->kernel_add; 
@@ -325,13 +315,6 @@ MatrixCL MatrixCL::operator+(const MatrixCL& other) const {
 
 // Matrix multiplication: C = A * B
 MatrixCL MatrixCL::operator*(const MatrixCL& other) const {
-    if (cols_ != other.numRows()) {
-        throw std::invalid_argument("Matrix dimensions do not match for multiplication.");
-    }
-    if (context_() != other.getContext()() || queue_() != other.getQueue()()) {
-        throw std::runtime_error("Cannot multiply matrices from different OpenCL contexts or queues.");
-    }
-
     MatrixCL result(rows_, other.numCols(), context_, queue_);
     try {
         cl::Kernel kernel = kernels_->kernel_matrix_mul; 
@@ -361,8 +344,7 @@ MatrixCL MatrixCL::transpose() const {
         kernel.setArg(1, result.getBuffer());
         kernel.setArg(2, rows_);
         kernel.setArg(3, cols_);
-        size_t global_work_size = static_cast<size_t>(rows_) * cols_;
-        queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(global_work_size), cl::NullRange);
+        queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(rows_, cols_), cl::NullRange);
     } catch (const cl::Error& err) {    
         throw std::runtime_error("OpenCL error during transpose: " + std::string(err.what()) + " (" + std::to_string(err.err()) + ")");
     } catch (const std::runtime_error& err) {
@@ -374,13 +356,6 @@ MatrixCL MatrixCL::transpose() const {
 // Subtract the product of a scalar and a given matrix: "this = this - scalar * other"
 // Performs the operation in-place on 'this' matrix's buffer.
 void MatrixCL::sub_mul(float scalar, const MatrixCL& other) {
-    if (rows_ != other.numRows() || cols_ != other.numCols()) {
-        throw std::invalid_argument("Matrix dimensions must match for subtraction.");
-    }
-    if (context_() != other.getContext()() || queue_() != other.getQueue()()) {
-        throw std::runtime_error("Cannot subtract matrices from different OpenCL contexts or queues.");
-    }
-
     try {
         cl::Kernel kernel = kernels_->kernel_sub_mul; 
         kernel.setArg(0, buffer_); 
@@ -419,15 +394,6 @@ MatrixCL MatrixCL::sigmoid() const {
 }
 // Calculates gradient for sigmoid and adds it to 'this' matrix (gradient accumulator).
 void MatrixCL::sigmoid_backward(const MatrixCL& input_values, const MatrixCL& output_gradient) {
-    if (rows_ != input_values.numRows() || cols_ != input_values.numCols() ||
-        rows_ != output_gradient.numRows() || cols_ != output_gradient.numCols()) {
-        throw std::invalid_argument("Matrix dimensions must match for sigmoid_backward.");
-    }
-    if (context_() != input_values.getContext()() || queue_() != input_values.getQueue()() ||
-        context_() != output_gradient.getContext()() || queue_() != output_gradient.getQueue()()) {
-         throw std::runtime_error("Cannot perform sigmoid backward update on matrices from different OpenCL contexts or queues.");
-    }
-
     size_t num_elements = static_cast<size_t>(rows_) * cols_;
      if (num_elements == 0) return;
 
@@ -452,13 +418,6 @@ void MatrixCL::sigmoid_backward(const MatrixCL& input_values, const MatrixCL& ou
 
 // Calculates Binary Cross-Entropy Loss between the entries of 'this' matrix and the target matrix element-wise. Returns a MatrixCL containing the losses.
 MatrixCL MatrixCL::binary_cross_entropy(const MatrixCL& targets) const {
-    if (rows_ != targets.numRows() || cols_ != targets.numCols()) {
-        throw std::invalid_argument("Matrix dimensions must match for binary_cross_entropy.");
-    }
-    if (context_() != targets.getContext()() || queue_() != targets.getQueue()()) {
-        throw std::runtime_error("Cannot calculate BCE on matrices from different OpenCL contexts or queues.");
-    }
-
     MatrixCL result(rows_, cols_, context_, queue_);
     try {
         cl::Kernel kernel = kernels_->kernel_bce_elementwise; // Use cached kernel
@@ -481,15 +440,6 @@ MatrixCL MatrixCL::binary_cross_entropy(const MatrixCL& targets) const {
 }
 
 void MatrixCL::binary_cross_entropy_backward(const MatrixCL& predictions, const MatrixCL& targets) {
-     if (rows_ != predictions.numRows() || cols_ != predictions.numCols() ||
-        rows_ != targets.numRows() || cols_ != targets.numCols()) {
-        throw std::invalid_argument("Matrix dimensions must match for binary_cross_entropy_backward.");
-    }
-    if (context_() != predictions.getContext()() || queue_() != predictions.getQueue()() ||
-        context_() != targets.getContext()() || queue_() != targets.getQueue()()) {
-         throw std::runtime_error("Cannot perform BCE backward update on matrices from different OpenCL contexts or queues.");
-    }
-
     size_t num_elements = static_cast<size_t>(rows_) * cols_;
      if (num_elements == 0) return;
 
