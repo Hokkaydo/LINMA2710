@@ -223,9 +223,6 @@ MatrixCL::MatrixCL(int rows, int cols, cl::Context context, cl::CommandQueue que
     buffer_ = cl::Buffer(context, CL_MEM_READ_WRITE, buffer_size_bytes());
 
     if (initial_data) {
-        if (initial_data->size() != static_cast<size_t>(rows) * cols) {
-            throw std::invalid_argument("Initial data size does not match matrix dimensions.");
-        }
         queue.enqueueWriteBuffer(buffer_, CL_TRUE, 0, buffer_size_bytes(), initial_data->data());
     } else {
         fill(0.0f);
@@ -396,11 +393,11 @@ void MatrixCL::sigmoid_backward(const MatrixCL& input_values, const MatrixCL& ou
     const size_t num_elements = rows_ * cols_;
 
     try {
-        cl::Kernel kernel = kernels_->kernel_sigmoid_backward;  // Use cached kernel
+        cl::Kernel kernel = kernels_->kernel_sigmoid_backward;  
 
-        kernel.setArg(0, this->buffer_);                        // gradient_accumulator (read-write)
-        kernel.setArg(1, input_values.getBuffer());             // input_values (read-only)
-        kernel.setArg(2, output_gradient.getBuffer());          // output_gradient (read-only)
+        kernel.setArg(0, this->buffer_);                        // gradient_accumulator
+        kernel.setArg(1, input_values.getBuffer());             
+        kernel.setArg(2, output_gradient.getBuffer());          
         kernel.setArg(3, rows_);
         kernel.setArg(4, cols_);
 
@@ -420,13 +417,13 @@ MatrixCL MatrixCL::binary_cross_entropy(const MatrixCL& targets) const {
     const float epsilon = 1e-8f;
 
     try {
-        cl::Kernel kernel = kernels_->kernel_bce_elementwise;   // Use cached kernel
-        kernel.setArg(0, buffer_);                              // predictions (read-only)
-        kernel.setArg(1, targets.getBuffer());                  // targets (read-only)
-        kernel.setArg(2, result.getBuffer());                   // elementwise_loss (write-only)
+        cl::Kernel kernel = kernels_->kernel_bce_elementwise;   
+        kernel.setArg(0, buffer_);                              // predictions
+        kernel.setArg(1, targets.getBuffer());                  
+        kernel.setArg(2, result.getBuffer());                   // elementwise_loss
         kernel.setArg(3, rows_);
         kernel.setArg(4, cols_);
-        kernel.setArg(5, epsilon);                              // epsilon
+        kernel.setArg(5, epsilon);                              
 
         queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(rows_ * cols_));
 
@@ -444,11 +441,11 @@ void MatrixCL::binary_cross_entropy_backward(const MatrixCL& predictions, const 
     const float epsilon = 1e-8f;
 
     try {
-        cl::Kernel kernel = kernels_->kernel_bce_backward;  // Use cached kernel
+        cl::Kernel kernel = kernels_->kernel_bce_backward;  
 
-        kernel.setArg(0, this->buffer_);                    // gradient_accumulator (read-write)
-        kernel.setArg(1, predictions.getBuffer());          // predictions (read-only)
-        kernel.setArg(2, targets.getBuffer());              // targets (read-only)
+        kernel.setArg(0, this->buffer_);                    // gradient_accumulator
+        kernel.setArg(1, predictions.getBuffer());          
+        kernel.setArg(2, targets.getBuffer());              
         kernel.setArg(3, rows_);
         kernel.setArg(4, cols_);
         kernel.setArg(5, epsilon);
