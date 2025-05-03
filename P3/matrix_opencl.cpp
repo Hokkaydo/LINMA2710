@@ -115,23 +115,27 @@ const std::string kernel_source_sigmoid_backward = R"(
 )";
 const std::string kernel_source_bce_elementwise = R"(
      __kernel void bce_elementwise(__global const float* predictions, __global const float* targets, __global float* elementwise_loss, int rows, int cols, float epsilon) {
-        int idx = get_global_id(0); int total_elements = rows * cols;
+        int idx = get_global_id(0); 
+        int total_elements = rows * cols;
         if (idx < total_elements) {
-            float pred = predictions[idx]; float targ = targets[idx];
-            float denominator1 = max(pred + epsilon, epsilon); // Avoid exactly zero denominator
-            float denominator2 = max(1.0f - pred + epsilon, epsilon);
-            elementwise_loss[idx] = -(targ * log(denominator1) + (1.0f - targ) * log(denominator2));
+            float pred = predictions[idx]; 
+            float targ = targets[idx];
+            float a = fmax(pred, epsilon);
+            float b = fmax(1.0f - pred, epsilon);
+            elementwise_loss[idx] = -(targ * log(a) + (1.0f - targ) * log(b));
         }
     }
 )";
 const std::string kernel_source_bce_backward = R"(
     __kernel void bce_backward(__global float* grad_acc, __global const float* predictions, __global const float* targets, int rows, int cols, float epsilon, float inv_num_elements) {
-        int idx = get_global_id(0); int total_elements = rows * cols;
+        int idx = get_global_id(0); 
+        int total_elements = rows * cols;
         if (idx < total_elements) {
-            float pred = predictions[idx]; float targ = targets[idx];
-            float denominator1 = max(pred + epsilon, epsilon); // Avoid exactly zero denominator
-            float denominator2 = max(1.0f - pred + epsilon, epsilon);
-            float bce_grad = -(targ / denominator1 - (1.0f - targ) / denominator2);
+            float pred = predictions[idx]; 
+            float targ = targets[idx];
+            float a = fmax(pred, epsilon); 
+            float b = fmax(1.0f - pred, epsilon);
+            float bce_grad = -(targ / a - (1.0f - targ) / b);
             grad_acc[idx] += inv_num_elements * bce_grad;
         }
     }
@@ -389,15 +393,14 @@ MatrixCL MatrixCL::sigmoid() const {
 }
 // Calculates gradient for sigmoid and adds it to 'this' matrix (gradient accumulator).
 void MatrixCL::sigmoid_backward(const MatrixCL& input_values, const MatrixCL& output_gradient) {
-    size_t num_elements = static_cast<size_t>(rows_) * cols_;
-     if (num_elements == 0) return;
+    const size_t num_elements = rows_ * cols_;
 
     try {
-        cl::Kernel kernel = kernels_->kernel_sigmoid_backward; // Use cached kernel
+        cl::Kernel kernel = kernels_->kernel_sigmoid_backward;  // Use cached kernel
 
-        kernel.setArg(0, this->buffer_);            // gradient_accumulator (read-write)
-        kernel.setArg(1, input_values.getBuffer());  // input_values (read-only)
-        kernel.setArg(2, output_gradient.getBuffer()); // output_gradient (read-only)
+        kernel.setArg(0, this->buffer_);                        // gradient_accumulator (read-write)
+        kernel.setArg(1, input_values.getBuffer());             // input_values (read-only)
+        kernel.setArg(2, output_gradient.getBuffer());          // output_gradient (read-only)
         kernel.setArg(3, rows_);
         kernel.setArg(4, cols_);
 
@@ -413,14 +416,17 @@ void MatrixCL::sigmoid_backward(const MatrixCL& input_values, const MatrixCL& ou
 // Calculates Binary Cross-Entropy Loss between the entries of 'this' matrix and the target matrix element-wise. Returns a MatrixCL containing the losses.
 MatrixCL MatrixCL::binary_cross_entropy(const MatrixCL& targets) const {
     MatrixCL result(rows_, cols_, context_, queue_);
+
+    const float epsilon = 1e-8f;
+
     try {
-        cl::Kernel kernel = kernels_->kernel_bce_elementwise; // Use cached kernel
-        kernel.setArg(0, buffer_);            // predictions (read-only)
-        kernel.setArg(1, targets.getBuffer()); // targets (read-only)
-        kernel.setArg(2, result.getBuffer());  // elementwise_loss (write-only)
+        cl::Kernel kernel = kernels_->kernel_bce_elementwise;   // Use cached kernel
+        kernel.setArg(0, buffer_);                              // predictions (read-only)
+        kernel.setArg(1, targets.getBuffer());                  // targets (read-only)
+        kernel.setArg(2, result.getBuffer());                   // elementwise_loss (write-only)
         kernel.setArg(3, rows_);
         kernel.setArg(4, cols_);
-        kernel.setArg(5, 1e-8f); // epsilon
+        kernel.setArg(5, epsilon);                              // epsilon
 
         queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(rows_ * cols_));
 
@@ -433,22 +439,20 @@ MatrixCL MatrixCL::binary_cross_entropy(const MatrixCL& targets) const {
 }
 
 void MatrixCL::binary_cross_entropy_backward(const MatrixCL& predictions, const MatrixCL& targets) {
-    size_t num_elements = static_cast<size_t>(rows_) * cols_;
-     if (num_elements == 0) return;
+    const size_t num_elements = rows_ * cols_;
 
     const float epsilon = 1e-8f;
-    const float inv_num_elements = 1.0f / static_cast<float>(num_elements);
 
     try {
-        cl::Kernel kernel = kernels_->kernel_bce_backward; // Use cached kernel
+        cl::Kernel kernel = kernels_->kernel_bce_backward;  // Use cached kernel
 
-        kernel.setArg(0, this->buffer_);            // gradient_accumulator (read-write)
-        kernel.setArg(1, predictions.getBuffer());  // predictions (read-only)
-        kernel.setArg(2, targets.getBuffer());      // targets (read-only)
+        kernel.setArg(0, this->buffer_);                    // gradient_accumulator (read-write)
+        kernel.setArg(1, predictions.getBuffer());          // predictions (read-only)
+        kernel.setArg(2, targets.getBuffer());              // targets (read-only)
         kernel.setArg(3, rows_);
         kernel.setArg(4, cols_);
         kernel.setArg(5, epsilon);
-        kernel.setArg(6, inv_num_elements);
+        kernel.setArg(6, 1.0f/num_elements); 
 
         queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(num_elements));
 
