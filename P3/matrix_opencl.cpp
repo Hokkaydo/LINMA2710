@@ -215,15 +215,7 @@ size_t MatrixCL::buffer_size_bytes() const {
 
 // --- Constructors ---
 // Creates a matrix initialized with zero elements or optional initial data
-MatrixCL::MatrixCL(int rows, int cols, cl::Context context, cl::CommandQueue queue, const std::vector<float>* initial_data) {
-    if (rows <= 0 || cols <= 0) {
-        throw std::invalid_argument("Matrix dimensions must be positive.");
-    }
-    rows_ = rows;
-    cols_ = cols;
-    context_ = context;
-    queue_ = queue;
-
+MatrixCL::MatrixCL(int rows, int cols, cl::Context context, cl::CommandQueue queue, const std::vector<float>* initial_data) : rows_(rows), cols_(cols), context_(context), queue_(queue) {
     buffer_ = cl::Buffer(context, CL_MEM_READ_WRITE, buffer_size_bytes());
 
     if (initial_data) {
@@ -237,17 +229,11 @@ MatrixCL::MatrixCL(int rows, int cols, cl::Context context, cl::CommandQueue que
 }
 
 // Copy constructor (performs device-to-device copy)
-MatrixCL::MatrixCL(const MatrixCL& other) {
-    rows_ = other.rows_;
-    cols_ = other.cols_;
-    context_ = other.context_;
-    queue_ = other.queue_;
-    buffer_ = cl::Buffer(context_, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, other.buffer_size_bytes(), nullptr);
-    
+MatrixCL::MatrixCL(const MatrixCL& other): rows_(other.rows_), cols_(other.cols_), context_(other.context_), queue_(other.queue_)
+{
+    buffer_ = cl::Buffer(context_, CL_MEM_READ_WRITE, buffer_size_bytes());
     queue_.enqueueCopyBuffer(other.buffer_, buffer_, 0, 0, buffer_size_bytes());
 }
-
-// Destructor (cl::Buffer manages its own release via RAII)
 
 // Copy assignment operator
 MatrixCL& MatrixCL::operator=(const MatrixCL& other) {
@@ -256,7 +242,7 @@ MatrixCL& MatrixCL::operator=(const MatrixCL& other) {
         cols_ = other.cols_;
         context_ = other.context_;
         queue_ = other.queue_;
-        buffer_ = cl::Buffer(context_, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, other.buffer_size_bytes(), nullptr);
+        buffer_ = cl::Buffer(context_, CL_MEM_READ_WRITE, other.buffer_size_bytes());
         
         queue_.enqueueCopyBuffer(other.buffer_, buffer_, 0, 0, buffer_size_bytes());
     }
