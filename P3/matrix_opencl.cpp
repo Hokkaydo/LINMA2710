@@ -365,7 +365,7 @@ void MatrixCL::sub_mul(float scalar, const MatrixCL& other) {
         kernel.setArg(4, cols_);
 
         size_t global_work_size = static_cast<size_t>(rows_) * cols_;
-        queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(global_work_size), cl::NullRange);
+        queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(global_work_size));
     } catch (const cl::Error& err) {
         throw std::runtime_error("OpenCL error during subtraction: " + std::string(err.what()) + " (" + std::to_string(err.err()) + ")");
     } catch (const std::runtime_error& err) {
@@ -384,7 +384,7 @@ MatrixCL MatrixCL::sigmoid() const {
         kernel.setArg(3, cols_);
 
         size_t global_work_size = static_cast<size_t>(rows_) * cols_;
-        queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(global_work_size), cl::NullRange);
+        queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(global_work_size));
     } catch (const cl::Error& err) {
         throw std::runtime_error("OpenCL error during sigmoid: " + std::string(err.what()) + " (" + std::to_string(err.err()) + ")");
     } catch (const std::runtime_error& err) {
@@ -407,7 +407,7 @@ void MatrixCL::sigmoid_backward(const MatrixCL& input_values, const MatrixCL& ou
         kernel.setArg(4, cols_);
 
         size_t global_work_size = num_elements;
-        queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(global_work_size), cl::NullRange);
+        queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(global_work_size));
 
     } catch (const cl::Error& err) {
         throw std::runtime_error("OpenCL error during sigmoid_backward: " + std::string(err.what()) + " (" + std::to_string(err.err()) + ")");
@@ -429,7 +429,7 @@ MatrixCL MatrixCL::binary_cross_entropy(const MatrixCL& targets) const {
         kernel.setArg(5, 1e-8f); // epsilon
 
         size_t global_work_size = static_cast<size_t>(rows_) * cols_;
-        queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(global_work_size), cl::NullRange);
+        queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(global_work_size));
 
     } catch (const cl::Error& err) {
         throw std::runtime_error("OpenCL error during binary_cross_entropy: " + std::string(err.what()) + " (" + std::to_string(err.err()) + ")");
@@ -458,7 +458,7 @@ void MatrixCL::binary_cross_entropy_backward(const MatrixCL& predictions, const 
         kernel.setArg(6, inv_num_elements);
 
         size_t global_work_size = num_elements;
-        queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(global_work_size), cl::NullRange);
+        queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(global_work_size));
 
     } catch (const cl::Error& err) {
         throw std::runtime_error("OpenCL error during binary_cross_entropy_backward: " + std::string(err.what()) + " (" + std::to_string(err.err()) + ")");
