@@ -2,11 +2,12 @@ ifndef CPPC
 	CPPC=clang++
 endif
 
-CCFLAGS=
+CCFLAGS=-O3 -DCL_TARGET_OPENCL_VERSION=300
 
 INC = -I $(CPP_COMMON)
 
-LIBS = -lOpenCL -lrt
+# `-ldl` needed for `dladdr`
+LIBS = -lOpenCL -lrt -lpthread -ldl
 
 # Check our platform and make sure we define the APPLE variable
 # and set up the right compiler flags and libraries

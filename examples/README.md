@@ -159,7 +159,7 @@ run the following in the folder where the `tau.slog2` file is
 [blegat@mbackf1 vadd_chain]$ jumpshot tau.slog2
 ```
 
-## Profiling with `tracy`
+## Profiling with Tracy profiler
 
-An example for profiling OpenCL with `tracy` is available [here](https://github.com/wolfpld/tracy/tree/master/examples/OpenCLVectorAdd).
-We also added [a slightly adapted version in here](OpenCL/tracy).
+An example for profiling OpenCL with Tracy is available [here](https://github.com/wolfpld/tracy/tree/master/examples/OpenCLVectorAdd).
+We also added [a slightly adapted version in here](OpenCL/tracy) where you also have instructions on how to run in on the cluster.
