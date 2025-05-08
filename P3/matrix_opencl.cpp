@@ -121,7 +121,7 @@ const std::string kernel_source_bce_elementwise = R"(
             float pred = predictions[idx]; 
             float targ = targets[idx];
             float a = fmax(pred, epsilon);
-            float b = fmax(1.0f - pred, epsilon);
+            float b = fmax(1.0f - pred, epsilon);-lOpenCL
             elementwise_loss[idx] = -(targ * log(a) + (1.0f - targ) * log(b));
         }
     }
@@ -283,7 +283,7 @@ void MatrixCL::fill(float value) {
     kernel.setArg(2, rows_);
     kernel.setArg(3, cols_);
 
-    queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(rows_ * cols_), cl::NullRange);
+    queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(rows_ * cols_));
 }
 
 // Addition: C = A + B
@@ -297,7 +297,7 @@ MatrixCL MatrixCL::operator+(const MatrixCL& other) const {
     kernel.setArg(3, rows_);
     kernel.setArg(4, cols_);
 
-    queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(rows_ * cols_), cl::NullRange);
+    queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(rows_ * cols_));
     
     return result;
 }
@@ -314,7 +314,7 @@ MatrixCL MatrixCL::operator*(const MatrixCL& other) const {
     kernel.setArg(4, cols_);
     kernel.setArg(5, other.numCols());
 
-    queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(rows_, cols_), cl::NullRange);
+    queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(rows_, cols_));
 
     return result;
 }
