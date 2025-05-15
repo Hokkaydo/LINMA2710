@@ -1,4 +1,4 @@
-CXX = clang++
+CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -O3 
 TARGET = main
 SRC = matrix_opencl.cpp main.cpp mlp_sgd.cpp globals.cpp

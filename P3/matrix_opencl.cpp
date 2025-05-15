@@ -81,14 +81,19 @@ const std::string kernel_source_transpose = R"(
 )";
 const std::string kernel_source_matrix_mul = R"(
     __kernel void matrix_mul(__global const float* A, __global const float* B, __global float* C, int A_rows, int A_cols, int B_cols) {
-        int row = get_global_id(0);
-        int col = get_global_id(1);
-        if (row < A_rows && col < B_cols) {
+        //int row = get_global_id(0);
+        //int col = get_global_id(1);
+        int idx = get_global_id(0);
+        //if (row < A_rows && col < B_cols) {
+        if (idx < A_rows * B_cols) {
+            int row = idx / B_cols;
+            int col = idx % B_cols;
             float sum = 0.0f;
             for (int k = 0; k < A_cols; ++k) {
                 sum += A[row * A_cols + k] * B[k * B_cols + col];
             }
-            C[row * B_cols + col] = sum;
+            C[idx] = sum;
+            //C[row * B_cols + col] = sum;
         }
     }
 )";
@@ -121,7 +126,7 @@ const std::string kernel_source_bce_elementwise = R"(
             float pred = predictions[idx]; 
             float targ = targets[idx];
             float a = fmax(pred, epsilon);
-            float b = fmax(1.0f - pred, epsilon);-lOpenCL
+            float b = fmax(1.0f - pred, epsilon);
             elementwise_loss[idx] = -(targ * log(a) + (1.0f - targ) * log(b));
         }
     }
@@ -314,7 +319,7 @@ MatrixCL MatrixCL::operator*(const MatrixCL& other) const {
     kernel.setArg(4, cols_);
     kernel.setArg(5, other.numCols());
 
-    queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(rows_, cols_));
+    queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(rows_*cols_));
 
     return result;
 }
