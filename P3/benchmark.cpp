@@ -16,12 +16,13 @@ std::vector<float> fill_random(int rows, int cols) {
 }
 
 int main(int argc, char** argv) {
-    if (argc < 2) {
-        std::cerr << "Usage: ./matrix_mul_exec <size>" << std::endl;
+    if (argc < 3) {
+        std::cerr << "Usage: ./matrix_mul_exec <size> <runs>" << std::endl;
         return 1;
     }
 
     int size = std::stoi(argv[1]);
+    int runs = std::stoi(argv[2]);
 
     // 1. --- OpenCL Setup ---
     std::vector<cl::Platform> platforms;
@@ -64,18 +65,28 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    std::vector<float> dataA = fill_random(size, size);
-    std::vector<float> dataB = fill_random(size, size);
+    std::chrono::duration<double, std::milli> total_time(0);
+    for (int i = 0; i < runs; ++i) {
 
-    MatrixCL A(size, size, context, queue, &dataA);
-    MatrixCL B(size, size, context, queue, &dataB);
+        // 2. --- Matrix Multiplication ---
+        std::vector<float> dataA = fill_random(size, size);
+        std::vector<float> dataB = fill_random(size, size);
 
-#ifdef FAST_MATMUL
-    MatrixCL C = A.fast_matrix_mul(B);
-#else
-    MatrixCL C = A * B;
-    queue.finish();
-#endif
-    queue.finish();
+        MatrixCL A(size, size, context, queue, &dataA);
+        MatrixCL B(size, size, context, queue, &dataB);
+        
+        auto start = std::chrono::high_resolution_clock::now();
+
+        #ifdef FAST_MATMUL
+            MatrixCL C = A.fast_matrix_mul(B);
+        #else
+            MatrixCL C = A * B;
+        #endif
+            queue.finish();
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::milli> elapsed = end - start;
+        total_time += elapsed;
+    }
+    std::cout << total_time.count() / runs << std::endl;
     return 0;
 }

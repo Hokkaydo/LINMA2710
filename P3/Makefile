@@ -21,7 +21,7 @@ naive: benchmark.cpp
 
 clean:
 	rm -f $(TARGET)
-	rm -f fast_matmul naive_matmul
+	rm -f benchmark
 
 
 .PHONY: all run clean
