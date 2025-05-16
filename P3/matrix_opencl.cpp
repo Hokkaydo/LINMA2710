@@ -7,7 +7,6 @@
 #include <sstream> // For building kernel source string
 #include <memory> 
 #include <mutex>  
-//#include "TAU.h"
 
 // ---------------------------------------------------------------------------
 // Static Member Definitions
