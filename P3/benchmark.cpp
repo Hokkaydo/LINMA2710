@@ -2,7 +2,6 @@
 #include <vector>
 #include <random>
 #include <chrono>
-#include <TAU.h>
 
 #include "matrix_opencl.hpp"
 
@@ -65,17 +64,11 @@ int main(int argc, char** argv) {
     MatrixCL B(size, size, context, queue, &dataB);
 
 #ifdef FAST_MATMUL
-    TAU_PROFILE("FastMatrixMul", "void ()", TAU_DEFAULT);
-    TAU_PROFILE_START("FastMatrixMul");
     MatrixCL C = A.fast_matrix_mul(B);
-    queue.finish();
-    TAU_PROFILE_STOP("FastMatrixMul");
 #else
-    TAU_PROFILE("NaiveMatrixMul", "void ()", TAU_DEFAULT);
-    TAU_PROFILE_START("NaiveMatrixMul");
     MatrixCL C = A * B;
     queue.finish();
-    TAU_PROFILE_STOP("NaiveMatrixMul");
 #endif
+    queue.finish();
     return 0;
 }
