@@ -25,6 +25,7 @@ struct KernelCache {
     cl::Kernel kernel_sub_mul;
     cl::Kernel kernel_transpose;
     cl::Kernel kernel_matrix_mul;
+    cl::Kernel kernel_fast_matrix_mul;
     cl::Kernel kernel_sigmoid;
     cl::Kernel kernel_sigmoid_backward;
     cl::Kernel kernel_bce_elementwise;
@@ -92,6 +93,9 @@ public:
     
     // Matrix multiplication: C = A * B
     MatrixCL operator*(const MatrixCL& other) const;
+
+    // Fast matrix multiplication: C = A * B (optimized for large matrices)
+    MatrixCL fast_matrix_mul(const MatrixCL& other) const;
 
     // Transpose: returns a new Matrix that is the transpose (B = A^T)
     MatrixCL transpose() const;

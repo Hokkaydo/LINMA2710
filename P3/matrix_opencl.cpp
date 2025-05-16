@@ -7,6 +7,7 @@
 #include <sstream> // For building kernel source string
 #include <memory> 
 #include <mutex>  
+//#include "TAU.h"
 
 // ---------------------------------------------------------------------------
 // Static Member Definitions
@@ -97,6 +98,49 @@ const std::string kernel_source_matrix_mul = R"(
         }
     }
 )";
+
+const std::string kernel_source_fast_matrix_mul = R"(
+    __kernel void fast_matrix_mul(__global const float* A, __global const float* B, __global float* C, int A_rows, int A_cols, int B_cols) {
+        int row = get_global_id(0);
+        int col = get_global_id(1);
+
+        int local_row = get_local_id(0);
+        int local_col = get_local_id(1);
+
+        const int TILE_SIZE = 16; 
+
+        __local float As[TILE_SIZE][TILE_SIZE];
+        __local float Bs[TILE_SIZE][TILE_SIZE];
+
+        float sum = 0.0f;
+        
+        for (int t = 0; t < (A_cols + TILE_SIZE - 1) / TILE_SIZE; t++) {
+            int tile_row = t * TILE_SIZE + local_row;
+            int tile_col = t * TILE_SIZE + local_col;
+
+            if (row < A_rows && tile_col < A_cols)
+                As[local_row][local_col] = A[row * A_cols + tile_col];
+            else
+                As[local_row][local_col] = 0.0f;
+            
+            if (tile_row < A_cols && col < B_cols)
+                Bs[local_row][local_col] = B[tile_row * B_cols + col];
+            else
+                Bs[local_row][local_col] = 0.0f;
+            
+            barrier(CLK_LOCAL_MEM_FENCE);
+            
+            for (int k = 0; k < TILE_SIZE; ++k)
+                sum += As[local_row][k] * Bs[k][local_col];
+            
+            barrier(CLK_LOCAL_MEM_FENCE);
+        }
+        if (row < A_rows && col < B_cols) {
+            C[row * B_cols + col] = sum;
+        }
+    }
+)";
+
 const std::string kernel_source_sigmoid = R"(
     __kernel void sigmoid(__global const float* input, __global float* output, int rows, int cols) {
         int idx = get_global_id(0);
@@ -168,6 +212,9 @@ void KernelCache::compileKernels(cl::Context context, const std::vector<cl::Devi
 
         cl::Program prog_matrix_mul = loadAndBuildProgram(context, devices, kernel_source_matrix_mul, "matrix_mul");
         kernel_matrix_mul = cl::Kernel(prog_matrix_mul, "matrix_mul");
+
+        cl::Program prog_fast_matrix_mul = loadAndBuildProgram(context, devices, kernel_source_fast_matrix_mul, "fast_matrix_mul");
+        kernel_fast_matrix_mul = cl::Kernel(prog_fast_matrix_mul, "fast_matrix_mul");
 
         cl::Program prog_sigmoid = loadAndBuildProgram(context, devices, kernel_source_sigmoid, "sigmoid");
         kernel_sigmoid = cl::Kernel(prog_sigmoid, "sigmoid");
@@ -319,7 +366,39 @@ MatrixCL MatrixCL::operator*(const MatrixCL& other) const {
     kernel.setArg(4, cols_);
     kernel.setArg(5, other.numCols());
 
+    // TAU_PROFILE_TIMER(timer, "NaiveMatMul", "", TAU_DEFAULT);
+    // TAU_PROFILE_START(timer);
     queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(rows_*cols_));
+    // queue_.finish(); // Wait for kernel to finish for profiling
+    // TAU_PROFILE_STOP(timer);
+    return result;
+}
+
+MatrixCL MatrixCL::fast_matrix_mul(const MatrixCL& other) const {
+    MatrixCL result(rows_, other.numCols(), context_, queue_);
+
+    cl::Kernel kernel = kernels_->kernel_fast_matrix_mul; 
+    kernel.setArg(0, buffer_);
+    kernel.setArg(1, other.getBuffer());
+    kernel.setArg(2, result.getBuffer()); 
+    kernel.setArg(3, rows_);
+    kernel.setArg(4, cols_);
+    kernel.setArg(5, other.numCols());
+
+    const size_t TILE_SIZE = 16;
+
+    // Align global work size to the nearest multiple of TILE_SIZE
+    size_t global_rows = ((rows_ + TILE_SIZE - 1) / TILE_SIZE) * TILE_SIZE;
+    size_t global_cols = ((other.numCols() + TILE_SIZE - 1) / TILE_SIZE) * TILE_SIZE;
+
+    cl::NDRange global_work_size(global_rows, global_cols);
+    cl::NDRange local_work_size(TILE_SIZE, TILE_SIZE);
+
+    // TAU_PROFILE_TIMER(timer, "FastMatMul", "", TAU_DEFAULT);
+    // TAU_PROFILE_START(timer);
+    queue_.enqueueNDRangeKernel(kernel, cl::NullRange, global_work_size, local_work_size);
+    // queue_.finish(); // Wait for kernel to finish for profiling
+    // TAU_PROFILE_STOP(timer);
 
     return result;
 }
