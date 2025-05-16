@@ -44,7 +44,14 @@ int main(int argc, char** argv) {
     cl::Device device = devices.front();
 
     cl::Context context(device);
-    cl::CommandQueue queue(context, device, CL_QUEUE_PROFILING_ENABLE); // Keep profiling enabled
+    cl_int err;
+    cl_command_queue cq = clCreateCommandQueue(context(), device(), CL_QUEUE_PROFILING_ENABLE, &err);
+    if (err != CL_SUCCESS) {
+        std::cerr << "Failed to create command queue: " << err << std::endl;
+        exit(1);
+    }
+    cl::CommandQueue queue(cq, true);
+
 
     std::vector<cl::Device> devices_to_init = {device};
     try {
