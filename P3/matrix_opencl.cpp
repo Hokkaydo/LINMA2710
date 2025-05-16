@@ -365,11 +365,8 @@ MatrixCL MatrixCL::operator*(const MatrixCL& other) const {
     kernel.setArg(4, cols_);
     kernel.setArg(5, other.numCols());
 
-    // TAU_PROFILE_TIMER(timer, "NaiveMatMul", "", TAU_DEFAULT);
-    // TAU_PROFILE_START(timer);
     queue_.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(rows_*cols_));
-    // queue_.finish(); // Wait for kernel to finish for profiling
-    // TAU_PROFILE_STOP(timer);
+    
     return result;
 }
 
@@ -393,11 +390,7 @@ MatrixCL MatrixCL::fast_matrix_mul(const MatrixCL& other) const {
     cl::NDRange global_work_size(global_rows, global_cols);
     cl::NDRange local_work_size(TILE_SIZE, TILE_SIZE);
 
-    // TAU_PROFILE_TIMER(timer, "FastMatMul", "", TAU_DEFAULT);
-    // TAU_PROFILE_START(timer);
     queue_.enqueueNDRangeKernel(kernel, cl::NullRange, global_work_size, local_work_size);
-    // queue_.finish(); // Wait for kernel to finish for profiling
-    // TAU_PROFILE_STOP(timer);
 
     return result;
 }
