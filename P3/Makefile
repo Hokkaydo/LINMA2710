@@ -14,10 +14,10 @@ run: $(TARGET)
 	./$(TARGET)
 
 fast: benchmark.cpp
-	$(CXX) $(CXXFLAGS) -DFAST_MATMUL -o benchmark benchmark.cpp $(LIBS) $(SRC)
+	$(CXX) $(CXXFLAGS) -DFAST_MATMUL -o benchmark$(SUFFIX) benchmark.cpp $(LIBS) $(SRC)
 
 naive: benchmark.cpp
-	$(CXX) $(CXXFLAGS) -o benchmark benchmark.cpp $(LIBS) $(SRC)
+	$(CXX) $(CXXFLAGS) -o benchmark$(SUFFIX) benchmark.cpp $(LIBS) $(SRC)
 
 clean:
 	rm -f $(TARGET)
