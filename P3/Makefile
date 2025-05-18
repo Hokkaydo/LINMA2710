@@ -8,7 +8,7 @@ all:
 	$(MAKE) clean && $(MAKE) run
 
 $(TARGET): $(SRC)
-	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SRC) main.cpp $(LIBS)
+	$(CXX) $(CXXFLAGS) -o $(TARGET)$(SUFFIX) $(SRC) main.cpp $(LIBS)
 
 run: $(TARGET)
 	./$(TARGET)
